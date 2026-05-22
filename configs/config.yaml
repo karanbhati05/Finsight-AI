@@ -1,0 +1,52 @@
+# FinSight AI — Central Configuration
+
+app:
+  name: "FinSight AI"
+  version: "1.0.0"
+  description: "Intelligent Financial Research Assistant"
+
+data:
+  raw_path: "data/raw"
+  processed_path: "data/processed"
+  embeddings_path: "data/embeddings"
+  tickers: ["AAPL", "MSFT", "GOOGL", "JPM", "GS"]  # default watchlist
+  news_lookback_days: 30
+  max_articles_per_ticker: 50
+
+nlp:
+  sentiment_model: "ProsusAI/finbert"           # FinBERT — finance-tuned BERT
+  summarization_model: "facebook/bart-large-cnn"
+  ner_model: "en_core_web_sm"
+  max_summary_length: 200
+  min_summary_length: 50
+
+ml:
+  model_type: "xgboost"                         # or "lightgbm"
+  target: "price_direction"                     # binary: up / down
+  test_size: 0.2
+  random_state: 42
+  features:
+    - sentiment_score
+    - sentiment_magnitude
+    - rolling_avg_sentiment_3d
+    - rolling_avg_sentiment_7d
+    - volume_change_pct
+    - price_ma5
+    - price_ma20
+    - rsi_14
+    - earnings_surprise
+
+rag:
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  vector_store: "chromadb"                      # or "faiss"
+  chunk_size: 512
+  chunk_overlap: 50
+  top_k_retrieval: 5
+  llm_model: "gemini-2.5-flash"                 # or "gemini-pro"
+  temperature: 0.2
+  max_tokens: 1000
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+  file: "logs/finsight.log"

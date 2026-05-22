@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environments
+.env
+venv/
+.venv/
+env/
+
+# Data (large files)
+data/raw/*.json
+data/raw/*.csv
+data/embeddings/
+
+# Models (large binaries)
+models/*.pkl
+models/*.pt
+models/*.bin
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

@@ -1,0 +1,41 @@
+2026-05-13 12:34:38 | INFO     | src.ml.feature_engineering | Building feature matrix...
+2026-05-13 12:34:38 | INFO     | src.ml.feature_engineering | Daily sentiment: 3 rows
+2026-05-13 12:34:38 | INFO     | src.ml.feature_engineering | Price date range: 2025-05-09 to 2026-05-07
+2026-05-13 12:34:38 | INFO     | src.ml.feature_engineering | Sentiment date range: 2026-05-08 to 2026-05-10
+2026-05-13 12:34:38 | INFO     | src.ml.feature_engineering | Rows after merge: 250
+2026-05-13 12:34:38 | INFO     | src.ml.feature_engineering | Merge complete | price rows: 250 | sentiment rows: 3 | merged rows: 250
+2026-05-13 12:34:38 | INFO     | src.ml.feature_engineering | Target distribution: {1: 0.528, 0: 0.472}
+2026-05-13 12:34:38 | INFO     | src.ml.feature_engineering | Feature matrix ready | rows=250 | features=11 | target_col=price_direction
+2026-05-13 12:37:24 | INFO     | src.nlp.sentiment | Loading FinBERT: ProsusAI/finbert
+2026-05-13 12:37:31 | INFO     | src.nlp.sentiment | FinBERT loaded on cpu
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | Building feature matrix...
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | Daily sentiment: 3 rows
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | Price date range: 2025-05-09 to 2026-05-07
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | Sentiment date range: 2026-05-08 to 2026-05-10
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | Rows after merge: 250
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | Merge complete | price rows: 250 | sentiment rows: 3 | merged rows: 250
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | Target distribution: {1: 0.528, 0: 0.472}
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | Feature matrix ready | rows=250 | features=11 | target_col=price_direction
+2026-05-13 12:41:30 | INFO     | src.ml.feature_engineering | X shape: (250, 11) | y distribution: {1: 132, 0: 118}
+2026-05-13 12:53:54 | INFO     | src.rag.embedder | Loading embedding model: sentence-transformers/all-MiniLM-L6-v2
+2026-05-13 12:53:57 | INFO     | src.rag.embedder | Embedder ready | model=sentence-transformers/all-MiniLM-L6-v2 | dim=384
+2026-05-13 12:54:05 | INFO     | src.rag.embedder | Embedding 8 chunks...
+2026-05-13 12:54:06 | INFO     | src.rag.embedder | Embeddings shape: (8, 384)
+2026-05-13 12:54:24 | INFO     | src.rag.vector_store | Initializing ChromaDB | persist_dir=../data/embeddings
+2026-05-13 12:54:25 | INFO     | src.rag.vector_store | Vector store ready | collection=notebook_test | documents=0
+2026-05-13 12:54:25 | INFO     | src.rag.embedder | Processing 20 documents for embedding...
+2026-05-13 12:54:25 | INFO     | src.rag.embedder | Total chunks to embed: 20
+2026-05-13 12:54:25 | INFO     | src.rag.embedder | Embedding 20 chunks...
+2026-05-13 12:54:25 | INFO     | src.rag.embedder | Embeddings shape: (20, 384)
+2026-05-13 12:54:25 | INFO     | src.rag.vector_store | Upserted 20 chunks
+2026-05-13 12:54:28 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:54:28 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:54:28 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:54:28 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:54:28 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:55:02 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:55:02 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:55:02 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:55:02 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:55:02 | INFO     | src.rag.vector_store | Query returned 3 chunks
+2026-05-13 12:58:56 | INFO     | src.rag.vector_store | Query returned 5 chunks
