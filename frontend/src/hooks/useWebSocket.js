@@ -43,11 +43,14 @@ export function useWebSocket() {
     const connectWebSocket = () => {
       if (unmounted) return
 
-      // Determine websocket URL
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = process.env.NODE_ENV === 'production'
-        ? `${protocol}//${window.location.host}/ws/prices`
-        : `ws://localhost:8000/ws/prices`
+      const envApi = import.meta.env.VITE_API_URL || ''
+      let wsUrl = 'ws://localhost:8000/ws/prices'
+      if (envApi.startsWith('http')) {
+        const cleanBase = envApi.replace('https://', 'wss://').replace('http://', 'ws://').replace(/\/api\/?$/, '')
+        wsUrl = `${cleanBase}/ws/prices`
+      } else if (window.location.protocol === 'https:') {
+        wsUrl = `wss://${window.location.host}/ws/prices`
+      }
 
       try {
         const ws = new WebSocket(wsUrl)
@@ -69,7 +72,6 @@ export function useWebSocket() {
             if (data.type === 'price_update' && data.prices) {
               setLastTimestamp(data.timestamp || new Date().toISOString())
 
-              // Broadcast prices to watchlist and portfolio stores
               Object.entries(data.prices).forEach(([symbol, quote]) => {
                 updateWatchlistPrice(symbol, quote)
                 updatePortfolioPrice(symbol, quote)
@@ -83,17 +85,16 @@ export function useWebSocket() {
         ws.onclose = () => {
           if (!unmounted) {
             setIsConnected(false)
-            // Auto reconnect after 4 seconds
-            reconnectTimeoutRef.current = setTimeout(connectWebSocket, 4000)
+            reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000)
           }
         }
 
-        ws.onerror = (err) => {
-          console.warn('WebSocket connection error:', err)
-          ws.close()
+        ws.onerror = () => {
+          if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+            ws.close()
+          }
         }
       } catch (err) {
-        console.warn('WebSocket init failed, retrying in 5s:', err)
         reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000)
       }
     }
@@ -109,7 +110,6 @@ export function useWebSocket() {
     }
   }, [])
 
-  // Re-subscribe when the list of tickers changes
   useEffect(() => {
     if (isConnected && allTickers.length > 0) {
       subscribeToTickers(allTickers)

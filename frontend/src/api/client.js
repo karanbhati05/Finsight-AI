@@ -1,7 +1,11 @@
 import axios from 'axios'
 
+// Dynamically use VITE_API_URL (e.g. https://finsight-backend.onrender.com/api) or fallback to local proxy /api
+const envUrl = import.meta.env.VITE_API_URL
+const baseURL = envUrl ? (envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl) : '/api'
+
 const client = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -10,7 +14,7 @@ const client = axios.create({
 client.interceptors.response.use(
   res => res.data,
   err => {
-    console.error('API Error:', err.response?.data || err.message)
+    console.warn('API Warning:', err.response?.data || err.message)
     return Promise.reject(err)
   }
 )
