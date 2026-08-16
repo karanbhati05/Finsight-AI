@@ -1,0 +1,10 @@
+{
+  "AAPL": {
+    "shares": 20.0001,
+    "buy_price": 138.63
+  },
+  "NVDA": {
+    "shares": 25.0,
+    "buy_price": 118.2
+  }
+}

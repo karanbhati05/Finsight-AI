@@ -1,27 +1,26 @@
 """
 backend/api/routers/chat.py
-RAG Chat endpoint — accepts questions, retrieves relevant financial
-documents from ChromaDB, and generates grounded answers via Gemini.
-
-Maintains per-session chatbot instances for multi-turn conversation history.
+RAG Chat & Multimodal Media Attachment endpoint.
+Supports:
+  - Text financial questions
+  - Uploading PDFs, DOCs, TXT files
+  - Uploading Chart Screenshots & Images (PNG, JPG, WebP)
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+import os
+import uuid
+import base64
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from backend.api.dependencies import get_chatbot
 from backend.models.schemas import ChatRequest, ChatResponse
 from src.rag.chatbot import FinancialChatbot
 from src.utils.logger import get_logger
-import uuid
 
 logger = get_logger(__name__)
 router = APIRouter()
 
-# ── Per-session chatbot instances ────────────────────────────────────────────
-# Each session_id gets its own FinancialChatbot so conversation history
-# is isolated between users/tabs. In production, use Redis-backed sessions.
 _sessions: dict = {}
 
-# ── Suggested questions per ticker ───────────────────────────────────────────
 SUGGESTED_QUESTIONS = {
     "AAPL": [
         "What are the main risk factors Apple mentioned in their 10-K?",
@@ -56,23 +55,68 @@ SUGGESTED_QUESTIONS = {
 }
 
 
+@router.post("/upload")
+async def upload_attachment(file: UploadFile = File(...)):
+    """
+    Upload a financial document (PDF, TXT, DOCX) or chart image (PNG, JPG).
+    Extracts text/metadata for multimodal Gemini analysis.
+    """
+    try:
+        content = await file.read()
+        filename = file.filename
+        content_type = file.content_type or ""
+        size_kb = round(len(content) / 1024, 1)
+
+        extracted_text = ""
+
+        # Handle PDF
+        if "pdf" in content_type or filename.lower().endswith(".pdf"):
+            try:
+                import pypdf
+                import io
+                reader = pypdf.PdfReader(io.BytesIO(content))
+                pages = [page.extract_text() or "" for page in reader.pages[:15]]
+                extracted_text = "\n".join(pages).strip()
+            except Exception:
+                extracted_text = f"[Attached PDF: {filename} ({size_kb} KB)]"
+
+        # Handle Images (PNG, JPG, WebP)
+        elif "image" in content_type or any(filename.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp"]):
+            b64_img = base64.b64encode(content).decode("utf-8")
+            extracted_text = f"[Attached Chart/Image: {filename} ({size_kb} KB)]"
+            return {
+                "filename": filename,
+                "size_kb": size_kb,
+                "type": "image",
+                "preview": f"data:{content_type};base64,{b64_img[:50]}...",
+                "extracted_text": extracted_text,
+            }
+
+        # Handle Text / Markdown
+        else:
+            try:
+                extracted_text = content.decode("utf-8", errors="ignore")[:10000]
+            except Exception:
+                extracted_text = f"[Attached Document: {filename}]"
+
+        return {
+            "filename": filename,
+            "size_kb": size_kb,
+            "type": "document",
+            "extracted_text": extracted_text[:4000],
+        }
+    except Exception as e:
+        logger.error(f"File upload processing failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process file: {e}")
+
+
 @router.post("", response_model=ChatResponse)
 async def chat(
     request:    ChatRequest,
     chatbot_:   FinancialChatbot = Depends(get_chatbot),
 ):
-    """
-    Send a question to the RAG chatbot and get a grounded answer.
-
-    The chatbot retrieves relevant document chunks from ChromaDB,
-    builds a context window, and generates an answer via Gemini LLM.
-
-    Session-based: each session_id maintains its own conversation
-    history for multi-turn dialogue.
-    """
     session_id = request.session_id or str(uuid.uuid4())
 
-    # Get or create a session-specific chatbot instance
     if session_id not in _sessions:
         _sessions[session_id] = FinancialChatbot()
 
@@ -106,10 +150,6 @@ async def clear_session(session_id: str):
 
 @router.get("/suggestions/{ticker}")
 async def get_suggestions(ticker: str):
-    """
-    Get suggested questions for a ticker.
-    Returns ticker-specific questions if available, else defaults.
-    """
     questions = SUGGESTED_QUESTIONS.get(
         ticker.upper(),
         SUGGESTED_QUESTIONS["DEFAULT"]

@@ -7,12 +7,18 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node dependencies & builds
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Editor & OS files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -23,11 +29,11 @@ dist-ssr
 *.sln
 *.sw?
 
-
+# Virtual environments & Python artifacts
 .venv/
-.venv_v2/
+.venv*/
 venv/
-venv_v2/
+venv*/
 __pycache__/
 *.pyc
 .antigravity/

@@ -1,33 +1,67 @@
-# Python
+# Python & bytecode
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
 dist/
 build/
 .eggs/
 
-# Environments
-v_env*/
+# Virtual Environments
+venv/
 venv*/
+.venv/
 .venv*/
-**/venv_v2/
+env/
+env*/
+.env_*/
+v_env*/
+ENV/
 
-# Data (large files)
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.local
+*.tsbuildinfo
+
+# Database & Cache
+*.db
+*.sqlite
+*.sqlite3
+.cache/
+.pytest_cache/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Data & Embeddings (large/generated files)
 data/raw/*.json
 data/raw/*.csv
 data/embeddings/
+data/processed/
 
-# Models (large binaries)
+# Models (binary model weights)
 models/*.pkl
 models/*.pt
 models/*.bin
+models/*.onnx
 
-# Notebooks checkpoints
+# Jupyter Notebooks
 .ipynb_checkpoints/
 
-# IDE
+# IDEs & System files
 .vscode/
 .idea/
-
-# OS
+.antigravity/
 .DS_Store
+Thumbs.db

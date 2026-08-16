@@ -1,11 +1,10 @@
 """
 backend/api/routers/portfolio.py
-Portfolio CRUD endpoints — in-memory storage with real-time P&L calculation.
-
-Holdings are stored as {ticker: {shares, buy_price}} and enriched with
-current market prices from yfinance to compute unrealized P&L.
+Portfolio CRUD endpoints with persistent storage and real-time P&L calculation.
 """
 
+import json
+from pathlib import Path
 import yfinance as yf
 from fastapi import APIRouter, HTTPException
 from backend.models.schemas import PortfolioItem
@@ -15,16 +14,33 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 router = APIRouter()
 
-# ── In-memory portfolio storage ──────────────────────────────────────────────
-# Key: ticker (uppercase), Value: {"shares": float, "buy_price": float}
-_portfolio: dict = {}
+STORAGE_FILE = Path("data/portfolio.json")
+
+def _load_portfolio() -> dict:
+    if STORAGE_FILE.exists():
+        try:
+            with open(STORAGE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "AAPL": {"shares": 15.0, "buy_price": 182.50},
+        "NVDA": {"shares": 25.0, "buy_price": 118.20},
+    }
+
+def _save_portfolio(data: dict):
+    try:
+        STORAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(STORAGE_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save portfolio to disk: {e}")
+
+_portfolio: dict = _load_portfolio()
 
 
 def _get_current_price(ticker: str) -> tuple:
-    """
-    Fetch current price and company name for a portfolio holding.
-    Returns (current_price, company_name) or (None, None) on failure.
-    """
+    """Fetch current price and company name for a portfolio holding."""
     try:
         t    = yf.Ticker(ticker)
         hist = t.history(period="5d", interval="1d")
@@ -48,10 +64,7 @@ def _get_current_price(ticker: str) -> tuple:
 
 @router.get("")
 async def get_portfolio():
-    """
-    Get all portfolio holdings with current prices and P&L.
-    Computes unrealized profit/loss for each holding and totals.
-    """
+    """Get all portfolio holdings with current prices and computed P&L."""
     if not _portfolio:
         return {
             "holdings":      [],
@@ -69,7 +82,6 @@ async def get_portfolio():
         buy_price = position["buy_price"]
         cost      = shares * buy_price
 
-        # Check cache first
         cache_key = f"portfolio:price:{ticker}"
         cached = cache.get(cache_key)
 
@@ -116,15 +128,10 @@ async def get_portfolio():
 
 @router.post("")
 async def add_to_portfolio(item: PortfolioItem):
-    """
-    Add a new holding or update an existing position.
-    If the ticker already exists, it adds to the existing position
-    using weighted average cost basis.
-    """
+    """Add or update a holding position in portfolio."""
     ticker = item.ticker.upper()
 
     if ticker in _portfolio:
-        # Update existing position with weighted average buy price
         existing = _portfolio[ticker]
         total_shares = existing["shares"] + item.shares
         total_cost   = (existing["shares"] * existing["buy_price"]) + (item.shares * item.buy_price)
@@ -134,16 +141,15 @@ async def add_to_portfolio(item: PortfolioItem):
             "shares":    round(total_shares, 4),
             "buy_price": avg_price,
         }
-        logger.info(f"Updated {ticker} position: {total_shares} shares @ ${avg_price}")
     else:
         _portfolio[ticker] = {
             "shares":    item.shares,
             "buy_price": item.buy_price,
         }
-        logger.info(f"Added {ticker}: {item.shares} shares @ ${item.buy_price}")
 
-    # Invalidate price cache
+    _save_portfolio(_portfolio)
     cache.delete(f"portfolio:price:{ticker}")
+    logger.info(f"Saved {ticker} holding to portfolio")
 
     return {
         "message": f"{ticker} added to portfolio",
@@ -162,6 +168,7 @@ async def remove_from_portfolio(ticker: str):
         raise HTTPException(status_code=404, detail=f"{ticker_upper} not in portfolio")
 
     del _portfolio[ticker_upper]
+    _save_portfolio(_portfolio)
     cache.delete(f"portfolio:price:{ticker_upper}")
     logger.info(f"Removed {ticker_upper} from portfolio")
 
