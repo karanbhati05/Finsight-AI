@@ -45,9 +45,15 @@ export function useWebSocket() {
 
       const envApi = import.meta.env.VITE_API_URL || ''
       let wsUrl = 'ws://localhost:8000/ws/prices'
+
       if (envApi.startsWith('http')) {
-        const cleanBase = envApi.replace('https://', 'wss://').replace('http://', 'ws://').replace(/\/api\/?$/, '')
-        wsUrl = `${cleanBase}/ws/prices`
+        // Strip http(s)://, strip /api, strip trailing slashes
+        const cleanHost = envApi
+          .replace(/^https?:\/\//, '')
+          .replace(/\/api\/?$/, '')
+          .replace(/\/+$/, '')
+        const protocol = envApi.startsWith('https') ? 'wss:' : 'ws:'
+        wsUrl = `${protocol}//${cleanHost}/ws/prices`
       } else if (window.location.protocol === 'https:') {
         wsUrl = `wss://${window.location.host}/ws/prices`
       }

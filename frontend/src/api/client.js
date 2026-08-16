@@ -1,16 +1,24 @@
 import axios from 'axios'
 
-// Dynamically use VITE_API_URL (e.g. https://finsight-backend.onrender.com/api) or fallback to local proxy /api
-const envUrl = import.meta.env.VITE_API_URL
-const baseURL = envUrl ? (envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl) : '/api'
+// Dynamically resolve base API URL and ensure /api prefix is always present
+let envUrl = import.meta.env.VITE_API_URL || '/api'
+
+if (envUrl.startsWith('http')) {
+  // Remove any trailing slashes
+  envUrl = envUrl.replace(/\/+$/, '')
+  // If user pasted backend root without /api, append /api automatically
+  if (!envUrl.endsWith('/api')) {
+    envUrl = `${envUrl}/api`
+  }
+}
 
 const client = axios.create({
-  baseURL,
+  baseURL: envUrl,
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Unwrap response data automatically so callers get data directly
+// Unwrap response data automatically
 client.interceptors.response.use(
   res => res.data,
   err => {
