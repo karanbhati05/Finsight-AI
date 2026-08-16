@@ -180,9 +180,14 @@ class FinancialVectorStore:
         # ChromaDB uses MongoDB-style filter syntax
         where = self._build_where_clause(ticker, source_type, sentiment)
 
+        collection_count = self.collection.count()
+        if collection_count == 0:
+            logger.warning("Vector store is empty — no documents to query")
+            return {"documents": [[]], "metadatas": [[]], "distances": [[]]}
+
         query_params = {
             "query_embeddings": [query_embedding.tolist()],
-            "n_results":        min(top_k, self.collection.count()),
+            "n_results":        min(top_k, collection_count),
             "include":          ["documents", "metadatas", "distances"],
         }
 

@@ -2708,3 +2708,85 @@ weighted avg      0.527     0.529     0.528        51
 2026-05-13 19:11:02 | INFO     | __main__ | 
 Next step: streamlit run app/streamlit_app.py
 2026-05-13 19:11:02 | INFO     | __main__ | ============================================================
+2026-08-15 20:45:06 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-15 20:47:05 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-15 20:56:24 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-15 21:06:36 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-15 21:06:49 | INFO     | backend.api.dependencies | Loading AI models at startup...
+2026-08-15 21:06:49 | INFO     | src.rag.vector_store | Initializing ChromaDB | persist_dir=data/embeddings
+2026-08-15 21:06:50 | INFO     | src.rag.vector_store | Vector store ready | collection=finsight_all | documents=238
+2026-08-15 21:06:50 | INFO     | src.nlp.sentiment | Loading FinBERT: ProsusAI/finbert
+2026-08-15 21:06:54 | INFO     | src.nlp.sentiment | FinBERT loaded on cpu
+2026-08-15 21:06:54 | INFO     | src.rag.chatbot | Initializing FinancialChatbot | model=gemini-2.5-flash
+2026-08-15 21:06:55 | INFO     | src.rag.embedder | Loading embedding model: sentence-transformers/all-MiniLM-L6-v2
+2026-08-15 21:13:17 | INFO     | src.rag.embedder | Embedder ready | model=sentence-transformers/all-MiniLM-L6-v2 | dim=384
+2026-08-15 21:13:17 | INFO     | src.rag.retriever | Retriever initialized
+2026-08-15 21:13:17 | INFO     | src.rag.chatbot | FinancialChatbot ready
+2026-08-15 21:13:17 | INFO     | backend.api.dependencies | All models loaded and ready
+2026-08-15 21:16:30 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk
+2026-08-15 21:16:31 | INFO     | backend.api.routers.prediction | Loaded 251 price rows for AAPL
+2026-08-15 21:16:31 | INFO     | backend.api.routers.prediction | Loaded 92 sentiment rows for AAPL
+2026-08-15 21:16:31 | INFO     | src.ml.predict | Generating latest prediction for AAPL
+2026-08-15 21:16:31 | INFO     | src.ml.predict | Model loaded | ticker=AAPL | CV F1=0.628
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Building feature matrix...
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Daily sentiment: 2 rows
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Price date range: 2025-05-13 to 2026-05-12
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Sentiment date range: 2026-05-12 to 2026-05-13
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Rows after merge: 251
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Merge complete | price rows: 251 | sentiment rows: 2 | merged rows: 251
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Target distribution: {1: 0.5258964143426295, 0: 0.47410358565737054}
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Feature matrix ready | rows=251 | features=11 | target_col=price_direction
+2026-08-15 21:16:31 | INFO     | src.ml.predict | Prediction for AAPL | UP ↑ | P(up)=0.600 | confidence=Medium
+2026-08-15 21:16:31 | INFO     | src.ml.predict | Model loaded | ticker=AAPL | CV F1=0.628
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Building feature matrix...
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Daily sentiment: 2 rows
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Price date range: 2025-05-13 to 2026-05-12
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Sentiment date range: 2026-05-12 to 2026-05-13
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Rows after merge: 251
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Merge complete | price rows: 251 | sentiment rows: 2 | merged rows: 251
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Target distribution: {1: 0.5258964143426295, 0: 0.47410358565737054}
+2026-08-15 21:16:31 | INFO     | src.ml.feature_engineering | Feature matrix ready | rows=251 | features=11 | target_col=price_direction
+2026-08-15 21:16:31 | INFO     | src.ml.predict | Batch predictions: 251 rows | Predicted up: 53.0%
+2026-08-15 21:16:31 | INFO     | src.ml.predict | Model loaded | ticker=AAPL | CV F1=0.628
+2026-08-16 00:32:26 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-16 00:33:48 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-16 01:24:57 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-16 13:19:45 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-16 13:22:47 | WARNING  | backend.cache.redis_client | Redis unavailable (Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.) — caching disabled
+2026-08-16 13:23:30 | INFO     | backend.api.dependencies | Loading AI models at startup...
+2026-08-16 13:23:30 | INFO     | src.rag.vector_store | Initializing ChromaDB | persist_dir=data/embeddings
+2026-08-16 13:23:31 | INFO     | src.rag.vector_store | Vector store ready | collection=finsight_all | documents=238
+2026-08-16 13:23:31 | INFO     | src.nlp.sentiment | Loading FinBERT: ProsusAI/finbert
+2026-08-16 13:23:35 | INFO     | src.nlp.sentiment | FinBERT loaded on cpu
+2026-08-16 13:23:35 | INFO     | src.rag.chatbot | Initializing FinancialChatbot | model=gemini-2.5-flash
+2026-08-16 13:23:35 | INFO     | src.rag.embedder | Loading embedding model: sentence-transformers/all-MiniLM-L6-v2
+2026-08-16 13:23:43 | INFO     | src.rag.embedder | Embedder ready | model=sentence-transformers/all-MiniLM-L6-v2 | dim=384
+2026-08-16 13:23:43 | INFO     | src.rag.retriever | Retriever initialized
+2026-08-16 13:23:43 | INFO     | src.rag.chatbot | FinancialChatbot ready
+2026-08-16 13:23:43 | INFO     | backend.api.dependencies | All models loaded and ready
+2026-08-16 13:24:38 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk
+2026-08-16 13:24:45 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk
+2026-08-16 13:26:27 | INFO     | src.rag.chatbot | Initializing FinancialChatbot | model=gemini-2.5-flash
+2026-08-16 13:26:28 | INFO     | src.rag.embedder | Loading embedding model: sentence-transformers/all-MiniLM-L6-v2
+2026-08-16 13:26:38 | INFO     | src.rag.embedder | Embedder ready | model=sentence-transformers/all-MiniLM-L6-v2 | dim=384
+2026-08-16 13:26:38 | INFO     | src.rag.vector_store | Initializing ChromaDB | persist_dir=data/embeddings
+2026-08-16 13:26:39 | INFO     | src.rag.vector_store | Vector store ready | collection=finsight_all | documents=238
+2026-08-16 13:26:39 | INFO     | src.rag.retriever | Retriever initialized
+2026-08-16 13:26:39 | INFO     | src.rag.chatbot | FinancialChatbot ready
+2026-08-16 13:26:39 | INFO     | src.rag.chatbot | Question: 'hello'
+2026-08-16 13:26:39 | INFO     | src.rag.retriever | Retrieving context | query='hello...' | ticker=AAPL
+2026-08-16 13:26:39 | INFO     | src.rag.vector_store | Query returned 5 chunks
+2026-08-16 13:26:39 | INFO     | src.rag.retriever | Retrieved 5 chunks | top similarity: 0.624
+2026-08-16 13:26:42 | INFO     | src.rag.chatbot | Answer generated | chunks_used=5 | answer_length=285
+2026-08-16 13:28:12 | INFO     | src.rag.chatbot | Question: 'Tell me more about: "Truly Unique AI Powerhouse Etches Buy Zone. Now Comes This Test."'
+2026-08-16 13:28:12 | INFO     | src.rag.retriever | Retrieving context | query='Tell me more about: "Truly Unique AI Powerhouse Etches Buy Zone. Now Comes This ...' | ticker=AAPL
+2026-08-16 13:28:12 | INFO     | src.rag.vector_store | Query returned 5 chunks
+2026-08-16 13:28:12 | INFO     | src.rag.retriever | Deduplication: 5 → 4 chunks
+2026-08-16 13:28:12 | INFO     | src.rag.retriever | Retrieved 4 chunks | top similarity: 0.681
+2026-08-16 13:28:16 | INFO     | src.rag.chatbot | Answer generated | chunks_used=4 | answer_length=337
+2026-08-16 14:07:57 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk
+2026-08-16 14:08:06 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk
+2026-08-16 14:09:02 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk
+2026-08-16 14:09:07 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk
+2026-08-16 14:18:42 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk
+2026-08-16 14:18:42 | INFO     | backend.api.routers.news | Loaded 92 enriched articles for AAPL from disk

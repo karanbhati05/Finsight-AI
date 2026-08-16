@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #ffffff;
+  color: #202124;
+  overflow: hidden;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e8eaed; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #c1c1c1; }
+
+/* ── Utility transitions ─────────────────────────────────── */
+.transition-base { transition: all 0.15s ease; }
+
+/* ── Panel slide-in animation ─────────────────────────────── */
+@keyframes slideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.animate-slide-in {
+  animation: slideIn 0.2s ease;
+}
+
+/* ── Fade-in animation ────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+/* ── Card hover lift ──────────────────────────────────────── */
+.card-hover {
+  transition: all 0.15s ease;
+}
+.card-hover:hover {
+  background: #f8f9fa;
+}
+
+/* ── Button press ──────────────────────────────────────────── */
+.btn-press:active {
+  transform: scale(0.98);
+}

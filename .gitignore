@@ -7,10 +7,10 @@ build/
 .eggs/
 
 # Environments
-.env
-venv/
-.venv/
-env/
+v_env*/
+venv*/
+.venv*/
+**/venv_v2/
 
 # Data (large files)
 data/raw/*.json

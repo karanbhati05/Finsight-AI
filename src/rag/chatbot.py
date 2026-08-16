@@ -2,10 +2,9 @@
 
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.schema import HumanMessage, AIMessage, SystemMessage
-from langchain.schema.output_parser import StrOutputParser
-from posthog import api_key
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.output_parsers import StrOutputParser
 from src.rag.embedder import DocumentEmbedder
 from src.rag.vector_store import FinancialVectorStore
 from src.rag.retriever import FinancialRetriever

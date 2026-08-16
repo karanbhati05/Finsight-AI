@@ -1,5 +1,7 @@
 # src/rag/embedder.py
-
+import os
+os.environ["USE_TF"] = "0"
+os.environ["USE_TORCH"] = "1"
 import numpy as np
 import pandas as pd
 from pathlib import Path
