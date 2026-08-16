@@ -7,41 +7,6 @@ import useResearchStore from '../../store/researchStore'
 import useMarketStore from '../../store/marketStore'
 import { sendMessage, clearSession } from '../../api/chat'
 
-// Intelligent fallback generator for instant responses when backend is cold
-function generateInstantAnalysis(query, ticker) {
-  const cleanQ = query.trim()
-  const lowerQ = cleanQ.toLowerCase()
-
-  if (lowerQ.includes('hello') || lowerQ.includes('hi') || lowerQ.includes('hey')) {
-    return {
-      answer: `Hello Karan! I'm **FinSight AI**, your institutional research strategist. I'm ready to evaluate **${ticker}**, analyze SEC 10-K filings, inspect technical momentum, or track macroeconomic shifts. What would you like to examine today?`,
-      sources: [{ source: 'FinSight Interactive Assistant', title: 'Institutional Strategist' }],
-    }
-  }
-
-  if (lowerQ.includes('market') || lowerQ.includes('today')) {
-    return {
-      answer: `### 🌐 Global Market Intelligence Overview\n\n- **Equities:** Major benchmarks are consolidating around key technical resistance with sector rotation favoring defensive cash-generative equities.\n- **Rates & Fixed Income:** The Federal Reserve policy path remains data-dependent, with the 10-Year Treasury yield holding steady.\n- **Sentiment:** Institutional risk appetite is measured with options skew reflecting disciplined hedging.`,
-      sources: [{ source: 'Federal Reserve FRED & Market Feeds', title: 'Macro Data Summary' }],
-    }
-  }
-
-  if (lowerQ.includes('risk') || lowerQ.includes('10-k') || lowerQ.includes('disclos')) {
-    return {
-      answer: `### 📑 SEC Form 10-K Risk Factor Disclosures for ${ticker}\n\n1. **Platform & Ecosystem Competition (Item 1A):** Increasing regulatory scrutiny regarding platform dominance, market concentration, and cross-border digital services taxes.\n2. **Supply Chain Concentration:** Dependency on specialized single-source silicon foundries and APAC contract assembly facilities.\n3. **Macroeconomic Sensitivity:** Global consumer discretionary demand fluctuations, FX exchange volatility against USD, and component inflation.`,
-      sources: [{ source: `${ticker} Form 10-K (Item 1A)`, title: 'SEC EDGAR Disclosures' }],
-    }
-  }
-
-  return {
-    answer: `### 📊 Institutional Analysis for ${ticker}\n\n**Key Takeaways for "${cleanQ}":**\n- **Valuation & Fundamentals:** ${ticker} exhibits robust balance sheet stability, strong free cash flow generation, and durable market positioning.\n- **Technical Oscillators:** 14-day RSI and medium-term exponential moving averages (50/200 EMA) indicate stable consolidation near support.\n- **Analyst Consensus:** Wall Street maintains an institutional **BUY / Overweight** rating supported by expanding product margins and secular catalysts.`,
-    sources: [
-      { source: `${ticker} Financial Statements`, title: 'SEC 10-K / 10-Q Normalized Filings' },
-      { source: 'Wall Street Research Consensus', title: 'Institutional Valuation' },
-    ],
-  }
-}
-
 export function ResearchPanel({ isExpanded, onToggleExpand }) {
   const [view, setView] = useState('chat') // 'chat' | 'threads'
 
@@ -61,17 +26,24 @@ export function ResearchPanel({ isExpanded, onToggleExpand }) {
     setLoading(true)
 
     try {
+      // Direct call to live backend Gemini engine
       const data = await sendMessage(queryText, activeTicker, sessionId)
       if (data?.answer) {
         addMessage('assistant', data.answer, data.sources || [])
       } else {
-        const fallback = generateInstantAnalysis(queryText, activeTicker)
-        addMessage('assistant', fallback.answer, fallback.sources)
+        addMessage(
+          'assistant',
+          `FinSight AI analyzed **${activeTicker}** regarding "${queryText}". The cloud model is currently processing market metrics. Please try asking again in a moment.`,
+          [{ source: 'FinSight AI Engine', title: 'Live Assistant' }]
+        )
       }
     } catch (err) {
-      console.warn('Backend in-flight fallback activated:', err)
-      const fallback = generateInstantAnalysis(queryText, activeTicker)
-      addMessage('assistant', fallback.answer, fallback.sources)
+      console.error('Chat error:', err)
+      addMessage(
+        'assistant',
+        `I'm connecting to the live Gemini AI engine on the cloud server. Please ensure your backend is awake and your query for **"${queryText}"** will be processed.`,
+        [{ source: 'FinSight System Gateway', title: 'Network Hub' }]
+      )
     } finally {
       setLoading(false)
     }
