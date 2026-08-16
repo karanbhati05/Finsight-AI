@@ -3,14 +3,6 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://your-backend.railway.app/api/$1"
-    },
-    {
-      "source": "/ws/(.*)",
-      "destination": "https://your-backend.railway.app/ws/$1"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
