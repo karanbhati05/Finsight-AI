@@ -17,7 +17,6 @@ tqdm==4.66.4
 
 # ─── NLP & Transformers ────────────────────────────────────
 transformers==4.41.2
-torch==2.3.0
 spacy==3.7.4
 sentencepiece==0.2.0
 nltk==3.8.1
@@ -26,7 +25,6 @@ nltk==3.8.1
 scikit-learn==1.5.0
 xgboost==2.0.3
 lightgbm==4.3.0
-shap==0.45.1
 
 # ─── RAG / LLM ─────────────────────────────────────────────
 langchain==0.2.5
@@ -34,10 +32,4 @@ langchain-community==0.2.5
 langchain-google-genai==1.0.7
 google-generativeai==0.7.2
 chromadb==0.5.0
-faiss-cpu==1.8.0
 sentence-transformers==3.0.1
-
-# ─── Dev / Testing ─────────────────────────────────────────
-pytest==8.2.2
-black==24.4.2
-flake8==7.0.0
