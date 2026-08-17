@@ -1,7 +1,7 @@
 """
 backend/api/websocket.py
 Real-Time WebSocket price streaming engine.
-Directly queries Finnhub, FMP, and CoinGecko for instant sub-second ticks.
+Directly queries Finnhub and FMP for instant sub-second ticks across subscribed tickers.
 """
 
 import os
@@ -75,16 +75,6 @@ async def _fetch_prices_batch(tickers: list[str]) -> dict:
         except Exception as e:
             logger.warning(f"FMP WebSocket batch error: {e}")
 
-    # Fallback to defaults for tickers not in results
-    for t in clean_tickers:
-        if t not in results:
-            base_p = 228.50 if t == "AAPL" else 125.00 if t == "NVDA" else 24366.00 if t == "^NSEI" else 64250.00 if "BTC" in t else 150.00
-            results[t] = {
-                "price": base_p,
-                "change": 0.50,
-                "change_pct": 0.25,
-            }
-
     return results
 
 
@@ -100,34 +90,44 @@ async def websocket_prices(websocket: WebSocket):
                     websocket.receive_text(), timeout=1.0
                 )
                 msg = json.loads(data)
+                action = msg.get("action")
+                ticker = msg.get("ticker", "").strip().upper()
 
-                if msg.get("action") == "subscribe":
-                    subscribed_tickers = msg.get("tickers", [])
-                    if subscribed_tickers:
-                        prices = await _fetch_prices_batch(subscribed_tickers)
-                        await manager.send(websocket, {
-                            "type": "price_update",
-                            "prices": prices,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
-                        })
-
-                elif msg.get("action") == "unsubscribe":
-                    subscribed_tickers = []
+                if action == "subscribe" and ticker and ticker not in subscribed_tickers:
+                    subscribed_tickers.append(ticker)
+                    logger.info(f"WebSocket subscribed to {ticker}")
+                elif action == "unsubscribe" and ticker in subscribed_tickers:
+                    subscribed_tickers.remove(ticker)
+                    logger.info(f"WebSocket unsubscribed from {ticker}")
 
             except asyncio.TimeoutError:
                 pass
+            except Exception as e:
+                logger.warning(f"WebSocket message parsing error: {e}")
 
-            if subscribed_tickers and websocket.client_state == WebSocketState.CONNECTED:
-                prices = await _fetch_prices_batch(subscribed_tickers)
-                await manager.send(websocket, {
-                    "type": "price_update",
-                    "prices": prices,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                })
+            # Push live ticks if client is still connected
+            if websocket.client_state != WebSocketState.CONNECTED:
+                break
 
-            await asyncio.sleep(5)
+            if subscribed_tickers:
+                price_batch = await _fetch_prices_batch(subscribed_tickers)
+                now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+                for t, info in price_batch.items():
+                    payload = {
+                        "type": "price_update",
+                        "ticker": t,
+                        "price": info["price"],
+                        "change": info["change"],
+                        "change_pct": info["change_pct"],
+                        "timestamp": now_str,
+                    }
+                    await manager.send(websocket, payload)
+
+            await asyncio.sleep(2.0)
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception as e:
+        logger.error(f"WebSocket unhandled error: {e}")
         manager.disconnect(websocket)

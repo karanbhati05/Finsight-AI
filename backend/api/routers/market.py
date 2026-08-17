@@ -1,6 +1,6 @@
 """
 backend/api/routers/market.py
-100% Live Market Data Provider using Finnhub, FMP, and CoinGecko APIs.
+100% Live Market Data Provider and Global Search Engine using Finnhub, FMP, and CoinGecko APIs.
 Bypasses cloud datacenter Yahoo rate-limits with dedicated institutional API tokens.
 """
 
@@ -19,7 +19,7 @@ FINNHUB_KEY = os.getenv("FINNHUB_API_KEY", "")
 FMP_KEY = os.getenv("FMP_API_KEY", "")
 COINGECKO_KEY = os.getenv("COINGECKO_API_KEY", "")
 
-# Curated global symbols mapping to Finnhub / FMP
+# Curated global symbols mapping for homepage index tabs
 MARKET_REGIONS = {
     "us": [
         {"symbol": "^GSPC", "finnhub": "^GSPC", "fmp": "^GSPC", "name": "S&P 500", "base_val": 5820.0},
@@ -103,13 +103,68 @@ async def _fetch_coingecko_prices(ids: list[str]) -> dict:
     return {}
 
 
+@router.get("/search")
+async def search_stocks(q: str = Query(..., min_length=1)):
+    """
+    Universal real-time global stock & asset search.
+    Searches across ~50,000 global tickers (US, India, Europe, Asia, ETFs, Crypto).
+    """
+    clean_q = q.strip().upper()
+    cache_key = f"market:search:v2:{clean_q}"
+    cached = cache.get(cache_key)
+    if cached:
+        return {"query": q, "results": cached}
+
+    results = []
+
+    # 1. Search via Financial Modeling Prep Global Search API
+    if FMP_KEY:
+        try:
+            async with httpx.AsyncClient(timeout=4.0) as client:
+                resp = await client.get(
+                    f"https://financialmodelingprep.com/api/v3/search?query={clean_q}&limit=12&apikey={FMP_KEY}"
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        for item in data:
+                            sym = item.get("symbol")
+                            if sym:
+                                results.append({
+                                    "symbol": sym,
+                                    "name": item.get("name") or sym,
+                                    "currency": item.get("currency") or "USD",
+                                    "exchange": item.get("stockExchange") or item.get("exchangeShortName") or "GLOBAL",
+                                })
+        except Exception as e:
+            logger.warning(f"FMP Search error for {clean_q}: {e}")
+
+    # 2. Add matching crypto/commodities if applicable
+    crypto_matches = [
+        {"symbol": "BTC-USD", "name": "Bitcoin", "exchange": "CRYPTO"},
+        {"symbol": "ETH-USD", "name": "Ethereum", "exchange": "CRYPTO"},
+        {"symbol": "SOL-USD", "name": "Solana", "exchange": "CRYPTO"},
+        {"symbol": "BNB-USD", "name": "BNB", "exchange": "CRYPTO"},
+        {"symbol": "GC=F",    "name": "Gold Futures", "exchange": "COMMODITY"},
+        {"symbol": "SI=F",    "name": "Silver Futures", "exchange": "COMMODITY"},
+        {"symbol": "CL=F",    "name": "Crude Oil WTI", "exchange": "COMMODITY"},
+    ]
+    for c in crypto_matches:
+        if clean_q in c["symbol"] or clean_q.lower() in c["name"].lower():
+            if not any(r["symbol"] == c["symbol"] for r in results):
+                results.insert(0, c)
+
+    cache.set(cache_key, results[:15], ttl=3600)
+    return {"query": q, "results": results[:15]}
+
+
 @router.get("/indices")
 async def get_indices(region: str = Query("india", regex="^(india|us|europe|crypto|currencies|futures|macro)$")):
     """Get live market indices for a region with dynamic values and sparklines."""
     if region == "macro":
         return {"region": "macro", "indices": []}
 
-    cache_key = f"market:indices:v5:{region}"
+    cache_key = f"market:indices:v6:{region}"
     cached = cache.get(cache_key)
     if cached:
         return {"region": region, "indices": cached}
