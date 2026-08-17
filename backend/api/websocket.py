@@ -85,6 +85,10 @@ async def websocket_prices(websocket: WebSocket):
 
     try:
         while True:
+            # Check connection state before waiting for messages
+            if websocket.client_state != WebSocketState.CONNECTED:
+                break
+
             try:
                 data = await asyncio.wait_for(
                     websocket.receive_text(), timeout=1.0
@@ -102,7 +106,12 @@ async def websocket_prices(websocket: WebSocket):
 
             except asyncio.TimeoutError:
                 pass
+            except (WebSocketDisconnect, RuntimeError):
+                break
             except Exception as e:
+                err_str = str(e).lower()
+                if "1006" in err_str or "disconnect" in err_str or "closed" in err_str:
+                    break
                 logger.warning(f"WebSocket message parsing error: {e}")
 
             # Push live ticks if client is still connected
@@ -127,7 +136,8 @@ async def websocket_prices(websocket: WebSocket):
             await asyncio.sleep(2.0)
 
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        pass
     except Exception as e:
         logger.error(f"WebSocket unhandled error: {e}")
+    finally:
         manager.disconnect(websocket)
