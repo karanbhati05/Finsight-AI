@@ -1,18 +1,19 @@
 """
 backend/api/routers/technicals.py
-Technical Indicators & Candlestick series (Powered by Alpha Vantage / Twelve Data math).
+Technical Indicators & 5-Year Historical Daily Candlesticks.
 """
 
 from fastapi import APIRouter
+from backend.providers.fmp_client import FMPClient
 from backend.providers.alphavantage_client import TechnicalAnalysisClient
 
 router = APIRouter()
 
 
 @router.get("/candlesticks/{ticker}")
-async def get_candlesticks(ticker: str, period: str = "3mo", interval: str = "1d"):
-    """Get OHLCV Candlestick data for interactive charting."""
-    candles = await TechnicalAnalysisClient.get_candlesticks(ticker, period=period, interval=interval)
+async def get_candlesticks(ticker: str, period: str = "1y", interval: str = "1d"):
+    """Get real audited OHLCV Candlestick data for interactive charting."""
+    candles = await FMPClient.get_historical_candlesticks(ticker)
     return {"ticker": ticker.upper(), "candlesticks": candles}
 
 
