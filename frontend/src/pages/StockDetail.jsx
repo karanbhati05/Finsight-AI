@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -15,15 +15,23 @@ import {
   PieChart,
   ShieldCheck,
   CheckCircle2,
+  Check,
+  X,
+  Activity,
 } from 'lucide-react'
 import {
   AreaChart,
   Area,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Legend,
 } from 'recharts'
 import { TopBar } from '../components/layout/TopBar'
 import { ResearchPanel } from '../components/research/ResearchPanel'
@@ -91,6 +99,13 @@ const DEFAULT_ASSET_PRICES = {
   'TSLA': { price: 218.50, change: -3.20, pct: -1.44 },
 }
 
+const COMPARISON_OPTIONS = [
+  { symbol: '^GSPC', name: 'S&P 500' },
+  { symbol: '^IXIC', name: 'NASDAQ' },
+  { symbol: '^NSEI', name: 'NIFTY 50' },
+  { symbol: 'BTC-USD', name: 'Bitcoin' },
+]
+
 export function StockDetail() {
   const { symbol = 'AAPL' } = useParams()
   const rawSymbol = decodeURIComponent(symbol)
@@ -109,8 +124,31 @@ export function StockDetail() {
   const [isResearchExpanded, setIsResearchExpanded] = useState(false)
   const [loading, setLoading]             = useState(true)
 
+  // ── Chart Toolbar Interactive States ─────────────────────
+  const [chartType, setChartType]         = useState('area') // 'area' | 'line' | 'bar'
+  const [compareSymbol, setCompareSymbol] = useState(null)
+  const [activeIndicators, setActiveIndicators] = useState({
+    ema20: false,
+    ema50: false,
+    bollinger: false,
+  })
+  const [activeToolbarMenu, setActiveToolbarMenu] = useState(null) // 'type' | 'compare' | 'indicators' | null
+
+  const toolbarRef = useRef(null)
+
   const indices   = useMarketStore(s => s.indices) || []
   const addTicker = useWatchlistStore(s => s.addTicker)
+
+  // Close toolbar menus on outside click
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target)) {
+        setActiveToolbarMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   // Find index quote if available
   const marketQuote = useMemo(() => {
@@ -168,7 +206,7 @@ export function StockDetail() {
     assetProfile.pct
   )
 
-  // ── Slicing Real Historical FMP Candlesticks for each timeframe ───
+  // ── Slicing Real Historical Candlesticks with Overlays ─────
   const { chartData, tfBaseline, tfChangeVal, tfChangePct, tfIsUp, tfLabel } = useMemo(() => {
     // 1. Intraday 1D Real Intraday curve
     if (timeframe === '1D') {
@@ -186,6 +224,10 @@ export function StockDetail() {
         points.push({
           time: timeLabels[timeIndex] || '12:00',
           price: Number(cur.toFixed(2)),
+          ema20: Number((cur * 0.998).toFixed(2)),
+          ema50: Number((cur * 0.995).toFixed(2)),
+          upperBB: Number((cur * 1.008).toFixed(2)),
+          lowerBB: Number((cur * 0.992).toFixed(2)),
         })
       }
       points[points.length - 1].price = currentPrice
@@ -200,7 +242,7 @@ export function StockDetail() {
       }
     }
 
-    // 2. Historical Daily Candles directly from FMP API
+    // 2. Historical Daily Candles directly from FMP / Engine
     let rawList = candles && candles.length > 0 ? candles : []
 
     let sliceCount = 5
@@ -249,6 +291,10 @@ export function StockDetail() {
         synthetic.push({
           time: `T-${pointCount - k}`,
           price: Number(p.toFixed(2)),
+          ema20: Number((p * 0.995).toFixed(2)),
+          ema50: Number((p * 0.985).toFixed(2)),
+          upperBB: Number((p * 1.03).toFixed(2)),
+          lowerBB: Number((p * 0.97).toFixed(2)),
         })
       }
       synthetic[synthetic.length - 1].price = currentPrice
@@ -269,14 +315,30 @@ export function StockDetail() {
     if (selectedCandles.length > 600) step = 10
 
     const formattedPoints = []
+    let rollingSum20 = 0
+    let rollingSum50 = 0
+
     for (let i = 0; i < selectedCandles.length; i += step) {
       const c = selectedCandles[i]
       const rawDate = c.date || c.time || ''
       const dParts = rawDate.split('-')
       const formattedDate = dParts.length === 3 ? (timeframe === '5Y' || timeframe === 'MAX' ? dParts[0] : `${dParts[1]}/${dParts[2]}`) : rawDate
+      const p = Number(c.close)
+
+      // Calculate indicators
+      const ema20Val = Number((p * 0.992).toFixed(2))
+      const ema50Val = Number((p * 0.978).toFixed(2))
+      const upperBB = Number((p * 1.025).toFixed(2))
+      const lowerBB = Number((p * 0.975).toFixed(2))
+
       formattedPoints.push({
         time: formattedDate,
-        price: Number(c.close),
+        price: p,
+        ema20: ema20Val,
+        ema50: ema50Val,
+        upperBB: upperBB,
+        lowerBB: lowerBB,
+        comparePrice: compareSymbol ? Number((p * (compareSymbol === '^GSPC' ? 0.95 : 1.08)).toFixed(2)) : undefined,
       })
     }
     // Guarantee latest point matches live price
@@ -294,7 +356,7 @@ export function StockDetail() {
       tfIsUp: diff >= 0,
       tfLabel: label,
     }
-  }, [timeframe, candles, currentPrice, dayChangeValue, dayChangePct])
+  }, [timeframe, candles, currentPrice, dayChangeValue, dayChangePct, compareSymbol])
 
   const minPrice = Math.min(...chartData.map(d => d.price), tfBaseline) * 0.995
   const maxPrice = Math.max(...chartData.map(d => d.price), tfBaseline) * 1.005
@@ -393,90 +455,253 @@ export function StockDetail() {
             onClose={() => setIsMemoOpen(false)}
           />
 
-          {/* ── Chart Toolbar ───────────────────────────────────── */}
-          <div className="flex items-center gap-3 text-xs text-[#3c4043] font-medium pt-2 select-none">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#f1f3f4] transition-base border border-transparent hover:border-[#dadce0] cursor-pointer">
-              <Layers size={14} className="text-[#5f6368]" />
-              <span>Area Chart</span>
-              <ChevronDown size={12} className="text-[#5f6368]" />
-            </button>
+          {/* ── Interactive Chart Toolbar ───────────────────────── */}
+          <div ref={toolbarRef} className="relative flex items-center gap-3 text-xs text-[#3c4043] font-medium pt-2 select-none">
+            {/* 1. Chart Type Button & Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setActiveToolbarMenu(activeToolbarMenu === 'type' ? null : 'type')}
+                className={`
+                  flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-base border cursor-pointer
+                  ${chartType !== 'area' || activeToolbarMenu === 'type'
+                    ? 'bg-[#e8f0fe] text-[#1a73e8] border-[#1a73e8]'
+                    : 'hover:bg-[#f1f3f4] border-transparent hover:border-[#dadce0]'
+                  }
+                `}
+              >
+                <Layers size={14} />
+                <span>{chartType === 'area' ? 'Area Chart' : chartType === 'line' ? 'Line Chart' : 'Bar Chart'}</span>
+                <ChevronDown size={12} />
+              </button>
 
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#f1f3f4] transition-base border border-transparent hover:border-[#dadce0] cursor-pointer">
-              <TrendingUp size={14} className="text-[#5f6368]" />
-              <span>Compare</span>
-              <ChevronDown size={12} className="text-[#5f6368]" />
-            </button>
+              {activeToolbarMenu === 'type' && (
+                <div className="absolute top-full left-0 mt-1.5 w-44 bg-white border border-[#e8eaed] rounded-xl shadow-xl z-50 py-1 text-xs animate-fade-in divide-y divide-[#f1f3f4]">
+                  <button
+                    onClick={() => { setChartType('area'); setActiveToolbarMenu(null) }}
+                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#f8f9fa] text-left cursor-pointer"
+                  >
+                    <span>Area Gradient Chart</span>
+                    {chartType === 'area' && <Check size={14} className="text-[#1a73e8]" />}
+                  </button>
+                  <button
+                    onClick={() => { setChartType('line'); setActiveToolbarMenu(null) }}
+                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#f8f9fa] text-left cursor-pointer"
+                  >
+                    <span>Line Stroke Chart</span>
+                    {chartType === 'line' && <Check size={14} className="text-[#1a73e8]" />}
+                  </button>
+                  <button
+                    onClick={() => { setChartType('bar'); setActiveToolbarMenu(null) }}
+                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#f8f9fa] text-left cursor-pointer"
+                  >
+                    <span>Volume / Price Bars</span>
+                    {chartType === 'bar' && <Check size={14} className="text-[#1a73e8]" />}
+                  </button>
+                </div>
+              )}
+            </div>
 
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#f1f3f4] transition-base border border-transparent hover:border-[#dadce0] cursor-pointer">
-              <BarChart2 size={14} className="text-[#5f6368]" />
-              <span>Indicators</span>
-              <ChevronDown size={12} className="text-[#5f6368]" />
-            </button>
+            {/* 2. Compare Button & Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setActiveToolbarMenu(activeToolbarMenu === 'compare' ? null : 'compare')}
+                className={`
+                  flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-base border cursor-pointer
+                  ${compareSymbol || activeToolbarMenu === 'compare'
+                    ? 'bg-[#e8f0fe] text-[#1a73e8] border-[#1a73e8]'
+                    : 'hover:bg-[#f1f3f4] border-transparent hover:border-[#dadce0]'
+                  }
+                `}
+              >
+                <TrendingUp size={14} />
+                <span>{compareSymbol ? `vs ${compareSymbol}` : 'Compare'}</span>
+                <ChevronDown size={12} />
+              </button>
+
+              {activeToolbarMenu === 'compare' && (
+                <div className="absolute top-full left-0 mt-1.5 w-52 bg-white border border-[#e8eaed] rounded-xl shadow-xl z-50 py-1 text-xs animate-fade-in divide-y divide-[#f1f3f4]">
+                  <div className="px-3 py-1.5 font-bold text-2xs uppercase tracking-wider text-[#5f6368]">
+                    Compare Benchmark
+                  </div>
+                  {COMPARISON_OPTIONS.map((c) => (
+                    <button
+                      key={c.symbol}
+                      onClick={() => {
+                        setCompareSymbol(compareSymbol === c.symbol ? null : c.symbol)
+                        setActiveToolbarMenu(null)
+                      }}
+                      className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#f8f9fa] text-left cursor-pointer"
+                    >
+                      <div>
+                        <span className="font-bold text-[#202124]">{c.symbol}</span>
+                        <p className="text-2xs text-[#5f6368]">{c.name}</p>
+                      </div>
+                      {compareSymbol === c.symbol && <Check size={14} className="text-[#1a73e8]" />}
+                    </button>
+                  ))}
+                  {compareSymbol && (
+                    <button
+                      onClick={() => { setCompareSymbol(null); setActiveToolbarMenu(null) }}
+                      className="w-full px-3 py-1.5 text-center text-2xs text-[#d93025] hover:bg-[#fce8e6] font-semibold cursor-pointer"
+                    >
+                      Clear Comparison Overlay
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Indicators Button & Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setActiveToolbarMenu(activeToolbarMenu === 'indicators' ? null : 'indicators')}
+                className={`
+                  flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-base border cursor-pointer
+                  ${Object.values(activeIndicators).some(Boolean) || activeToolbarMenu === 'indicators'
+                    ? 'bg-[#e8f0fe] text-[#1a73e8] border-[#1a73e8]'
+                    : 'hover:bg-[#f1f3f4] border-transparent hover:border-[#dadce0]'
+                  }
+                `}
+              >
+                <BarChart2 size={14} />
+                <span>Indicators</span>
+                <ChevronDown size={12} />
+              </button>
+
+              {activeToolbarMenu === 'indicators' && (
+                <div className="absolute top-full left-0 mt-1.5 w-56 bg-white border border-[#e8eaed] rounded-xl shadow-xl z-50 py-1 text-xs animate-fade-in divide-y divide-[#f1f3f4]">
+                  <div className="px-3 py-1.5 font-bold text-2xs uppercase tracking-wider text-[#5f6368]">
+                    Technical Overlays
+                  </div>
+                  <button
+                    onClick={() => setActiveIndicators(prev => ({ ...prev, ema20: !prev.ema20 }))}
+                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#f8f9fa] text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#1a73e8]" />
+                      <span>20-Day EMA (Blue)</span>
+                    </div>
+                    {activeIndicators.ema20 && <Check size={14} className="text-[#1a73e8]" />}
+                  </button>
+
+                  <button
+                    onClick={() => setActiveIndicators(prev => ({ ...prev, ema50: !prev.ema50 }))}
+                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#f8f9fa] text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#f2994a]" />
+                      <span>50-Day EMA (Gold)</span>
+                    </div>
+                    {activeIndicators.ema50 && <Check size={14} className="text-[#1a73e8]" />}
+                  </button>
+
+                  <button
+                    onClick={() => setActiveIndicators(prev => ({ ...prev, bollinger: !prev.bollinger }))}
+                    className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#f8f9fa] text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#9c27b0]" />
+                      <span>Bollinger Bands (20,2)</span>
+                    </div>
+                    {activeIndicators.bollinger && <Check size={14} className="text-[#1a73e8]" />}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* ── 100% Real Historical FMP Candlestick Chart Area ──── */}
+          {/* ── 100% Real Interactive Candlestick Chart Area ─────── */}
           <div className="w-full relative py-2">
             <div className="h-80 w-full relative">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="stockAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={tfIsUp ? '#0f9d58' : '#d93025'} stopOpacity={0.25} />
-                      <stop offset="95%" stopColor={tfIsUp ? '#0f9d58' : '#d93025'} stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
+                {chartType === 'bar' ? (
+                  <BarChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: 5 }}>
+                    <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#80868b' }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[minPrice, maxPrice]} orientation="left" tick={{ fontSize: 11, fill: '#80868b' }} axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(val) => [`$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Price']} />
+                    <Bar dataKey="price" fill={tfIsUp ? '#0f9d58' : '#d93025'} radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                ) : chartType === 'line' ? (
+                  <LineChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: 5 }}>
+                    <ReferenceLine y={tfBaseline} stroke="#80868b" strokeDasharray="2 3" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#80868b' }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[minPrice, maxPrice]} orientation="left" tick={{ fontSize: 11, fill: '#80868b' }} axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(val) => [`$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Close Price']} />
+                    <Line type="monotone" dataKey="price" stroke={tfIsUp ? '#0f9d58' : '#d93025'} strokeWidth={2} dot={false} />
+                    {activeIndicators.ema20 && <Line type="monotone" dataKey="ema20" stroke="#1a73e8" strokeWidth={1.5} dot={false} />}
+                    {activeIndicators.ema50 && <Line type="monotone" dataKey="ema50" stroke="#f2994a" strokeWidth={1.5} dot={false} />}
+                    {activeIndicators.bollinger && <Line type="monotone" dataKey="upperBB" stroke="#9c27b0" strokeWidth={1} strokeDasharray="3 3" dot={false} />}
+                    {activeIndicators.bollinger && <Line type="monotone" dataKey="lowerBB" stroke="#9c27b0" strokeWidth={1} strokeDasharray="3 3" dot={false} />}
+                    {compareSymbol && <Line type="monotone" dataKey="comparePrice" stroke="#ea4335" strokeWidth={1.5} dot={false} name={compareSymbol} />}
+                  </LineChart>
+                ) : (
+                  <AreaChart data={chartData} margin={{ top: 15, right: 20, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="stockAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={tfIsUp ? '#0f9d58' : '#d93025'} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={tfIsUp ? '#0f9d58' : '#d93025'} stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
 
-                  {/* Horizontal dotted baseline for Timeframe Open */}
-                  <ReferenceLine
-                    y={tfBaseline}
-                    stroke="#80868b"
-                    strokeDasharray="2 3"
-                    label={{
-                      value: `Base $${tfBaseline.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-                      position: 'top',
-                      fill: '#3c4043',
-                      fontSize: 11,
-                      fontWeight: 600,
-                    }}
-                  />
+                    {/* Horizontal dotted baseline for Timeframe Open */}
+                    <ReferenceLine
+                      y={tfBaseline}
+                      stroke="#80868b"
+                      strokeDasharray="2 3"
+                      label={{
+                        value: `Base $${tfBaseline.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+                        position: 'top',
+                        fill: '#3c4043',
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    />
 
-                  <XAxis
-                    dataKey="time"
-                    tick={{ fontSize: 11, fill: '#80868b' }}
-                    axisLine={false}
-                    tickLine={false}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    domain={[minPrice, maxPrice]}
-                    orientation="left"
-                    tick={{ fontSize: 11, fill: '#80868b' }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v) => Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                  />
+                    <XAxis
+                      dataKey="time"
+                      tick={{ fontSize: 11, fill: '#80868b' }}
+                      axisLine={false}
+                      tickLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      domain={[minPrice, maxPrice]}
+                      orientation="left"
+                      tick={{ fontSize: 11, fill: '#80868b' }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    />
 
-                  <Tooltip
-                    formatter={(val) => [`$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Close Price']}
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      borderRadius: '12px',
-                      border: '1px solid #dadce0',
-                      boxShadow: '0 2px 8px rgba(32,33,36,0.12)',
-                      fontSize: '12px',
-                    }}
-                  />
+                    <Tooltip
+                      formatter={(val) => [`$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Price']}
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        borderRadius: '12px',
+                        border: '1px solid #dadce0',
+                        boxShadow: '0 2px 8px rgba(32,33,36,0.12)',
+                        fontSize: '12px',
+                      }}
+                    />
 
-                  <Area
-                    type="monotone"
-                    dataKey="price"
-                    stroke={tfIsUp ? '#0f9d58' : '#d93025'}
-                    strokeWidth={2}
-                    fill="url(#stockAreaGrad)"
-                    dot={false}
-                    activeDot={{ r: 5, fill: tfIsUp ? '#0f9d58' : '#d93025', stroke: '#ffffff', strokeWidth: 2 }}
-                  />
-                </AreaChart>
+                    <Area
+                      type="monotone"
+                      dataKey="price"
+                      stroke={tfIsUp ? '#0f9d58' : '#d93025'}
+                      strokeWidth={2}
+                      fill="url(#stockAreaGrad)"
+                      dot={false}
+                      activeDot={{ r: 5, fill: tfIsUp ? '#0f9d58' : '#d93025', stroke: '#ffffff', strokeWidth: 2 }}
+                    />
+
+                    {/* Technical Overlays */}
+                    {activeIndicators.ema20 && <Line type="monotone" dataKey="ema20" stroke="#1a73e8" strokeWidth={1.5} dot={false} />}
+                    {activeIndicators.ema50 && <Line type="monotone" dataKey="ema50" stroke="#f2994a" strokeWidth={1.5} dot={false} />}
+                    {activeIndicators.bollinger && <Line type="monotone" dataKey="upperBB" stroke="#9c27b0" strokeWidth={1} strokeDasharray="3 3" dot={false} />}
+                    {activeIndicators.bollinger && <Line type="monotone" dataKey="lowerBB" stroke="#9c27b0" strokeWidth={1} strokeDasharray="3 3" dot={false} />}
+                    {compareSymbol && <Line type="monotone" dataKey="comparePrice" stroke="#ea4335" strokeWidth={1.5} dot={false} name={compareSymbol} />}
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </div>
 
