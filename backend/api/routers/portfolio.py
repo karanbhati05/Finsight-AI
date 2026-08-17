@@ -20,17 +20,52 @@ FMP_KEY = os.getenv("FMP_API_KEY", "")
 
 
 def _load_portfolio() -> list[dict]:
+    """Load and normalize portfolio JSON data."""
+    default_holdings = [
+        {"ticker": "AAPL", "shares": 50.0, "avg_buy_price": 182.50, "buy_date": "2024-01-15"},
+        {"ticker": "NVDA", "shares": 30.0, "avg_buy_price": 95.00,  "buy_date": "2024-02-20"},
+        {"ticker": "MSFT", "shares": 25.0, "avg_buy_price": 380.00, "buy_date": "2024-03-10"},
+    ]
+
     if STORAGE_FILE.exists():
         try:
             with open(STORAGE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return [
-        {"ticker": "AAPL", "shares": 50,  "avg_buy_price": 182.50, "buy_date": "2024-01-15"},
-        {"ticker": "NVDA", "shares": 30,  "avg_buy_price": 95.00,  "buy_date": "2024-02-20"},
-        {"ticker": "MSFT", "shares": 25,  "avg_buy_price": 380.00, "buy_date": "2024-03-10"},
-    ]
+                data = json.load(f)
+                if isinstance(data, list):
+                    normalized = []
+                    for item in data:
+                        if isinstance(item, dict) and "ticker" in item:
+                            normalized.append({
+                                "ticker": str(item.get("ticker")).upper(),
+                                "shares": float(item.get("shares") or 1),
+                                "avg_buy_price": float(item.get("avg_buy_price") or item.get("buy_price") or 100.0),
+                                "buy_date": str(item.get("buy_date") or "2024-01-01"),
+                            })
+                        elif isinstance(item, str):
+                            normalized.append({
+                                "ticker": item.upper(),
+                                "shares": 10.0,
+                                "avg_buy_price": 150.0,
+                                "buy_date": "2024-01-01",
+                            })
+                    if normalized:
+                        return normalized
+                elif isinstance(data, dict):
+                    normalized = []
+                    for k, v in data.items():
+                        sh = float(v) if isinstance(v, (int, float)) else 10.0
+                        normalized.append({
+                            "ticker": str(k).upper(),
+                            "shares": sh,
+                            "avg_buy_price": 150.0,
+                            "buy_date": "2024-01-01",
+                        })
+                    if normalized:
+                        return normalized
+        except Exception as e:
+            logger.warning(f"Error loading portfolio.json: {e}")
+
+    return default_holdings
 
 
 def _save_portfolio(data: list[dict]):
@@ -48,12 +83,17 @@ _holdings: list[dict] = _load_portfolio()
 async def _enrich_holdings(holdings: list[dict]) -> tuple[list[dict], dict]:
     """Enrich portfolio holdings with live prices and calculate P&L."""
     if not holdings:
-        return [], {"total_value": 0, "total_cost": 0, "total_pnl": 0, "total_pnl_pct": 0, "daily_pnl": 0}
+        return [], {"total_value": 0, "total_cost": 0, "total_pnl": 0, "total_pnl_pct": 0, "daily_pnl": 0, "holdings_count": 0}
 
-    tickers = [h["ticker"].upper() for h in holdings]
+    tickers = []
+    for h in holdings:
+        if isinstance(h, dict) and "ticker" in h:
+            tickers.append(str(h["ticker"]).upper())
+        elif isinstance(h, str):
+            tickers.append(h.upper())
+
     quotes = {}
-
-    if FMP_KEY:
+    if FMP_KEY and tickers:
         try:
             sym_str = ",".join(tickers)
             async with httpx.AsyncClient(timeout=4.0) as client:
@@ -76,9 +116,17 @@ async def _enrich_holdings(holdings: list[dict]) -> tuple[list[dict], dict]:
     daily_pnl = 0.0
 
     for h in holdings:
-        ticker = h["ticker"].upper()
-        shares = float(h.get("shares", 0))
-        avg_price = float(h.get("avg_buy_price") or h.get("buy_price") or 0)
+        if isinstance(h, dict):
+            ticker = str(h.get("ticker", "AAPL")).upper()
+            shares = float(h.get("shares") or 1)
+            avg_price = float(h.get("avg_buy_price") or h.get("buy_price") or 100.0)
+            b_date = str(h.get("buy_date") or "2024-01-01")
+        else:
+            ticker = str(h).upper()
+            shares = 10.0
+            avg_price = 100.0
+            b_date = "2024-01-01"
+
         cost_basis = shares * avg_price
 
         live = quotes.get(ticker, {})
@@ -107,7 +155,7 @@ async def _enrich_holdings(holdings: list[dict]) -> tuple[list[dict], dict]:
             "pnl_pct": round(pnl_pct, 2),
             "daily_change": round(change, 2),
             "daily_change_pct": round(change_pct, 2),
-            "buy_date": h.get("buy_date", "2024-01-01"),
+            "buy_date": b_date,
         })
 
     tot_pnl = total_val - total_cost
@@ -139,7 +187,7 @@ async def add_holding(holding: PortfolioHoldingCreate):
     buy_p = float(holding.avg_buy_price or holding.buy_price or 0.0)
 
     # If position already exists, average it
-    existing = next((h for h in _holdings if h["ticker"] == ticker), None)
+    existing = next((h for h in _holdings if isinstance(h, dict) and h.get("ticker") == ticker), None)
     if existing:
         total_shares = existing["shares"] + holding.shares
         total_cost = (existing["shares"] * existing["avg_buy_price"]) + (holding.shares * buy_p)
@@ -164,7 +212,7 @@ async def remove_holding(ticker: str):
     global _holdings
     ticker_upper = ticker.upper().strip()
     original_len = len(_holdings)
-    _holdings = [h for h in _holdings if h["ticker"] != ticker_upper]
+    _holdings = [h for h in _holdings if (isinstance(h, dict) and h.get("ticker") != ticker_upper) or (isinstance(h, str) and h != ticker_upper)]
 
     if len(_holdings) == original_len:
         raise HTTPException(status_code=404, detail=f"Holding {ticker_upper} not found")
