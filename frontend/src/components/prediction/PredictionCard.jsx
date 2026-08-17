@@ -56,8 +56,9 @@ export function PredictionCard({
 
   const Arrow = theme.ArrowIcon
 
-  const rsi = features.rsi_14 !== undefined ? Number(features.rsi_14).toFixed(1) : null
-  const sentimentScore = features.sentiment_score !== undefined ? Number(features.sentiment_score).toFixed(2) : null
+  const rsi = features['RSI (14-day)'] || features.rsi_14 || null
+  const sentimentScore = features['News Sentiment Polarity'] || features.sentiment_score || null
+  const maRatio = features['MA5 / MA20 Ratio'] || features.ma5_ma20_ratio || null
 
   return (
     <div
@@ -98,15 +99,20 @@ export function PredictionCard({
 
       {/* Footer Feature Snapshot */}
       <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs text-subtext flex-wrap gap-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {rsi && (
             <span className="bg-surface px-2 py-1 rounded border border-border/80 text-2xs font-medium">
               RSI (14): <strong className="text-text">{rsi}</strong>
             </span>
           )}
+          {maRatio && (
+            <span className="bg-surface px-2 py-1 rounded border border-border/80 text-2xs font-medium">
+              MA5/20: <strong className="text-text">{maRatio}</strong>
+            </span>
+          )}
           {sentimentScore && (
             <span className="bg-surface px-2 py-1 rounded border border-border/80 text-2xs font-medium">
-              FinBERT: <strong className="text-text">{sentimentScore > 0 ? `+${sentimentScore}` : sentimentScore}</strong>
+              Sentiment: <strong className="text-text">{sentimentScore}</strong>
             </span>
           )}
         </div>

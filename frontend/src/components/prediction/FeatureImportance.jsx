@@ -9,17 +9,17 @@ import {
 } from 'recharts'
 
 const DEFAULT_IMPORTANCES = [
-  { feature: 'Sentiment Score',       value: 0.284 },
-  { feature: 'RSI (14-day)',          value: 0.212 },
-  { feature: 'Rolling Sentiment (3d)',value: 0.175 },
-  { feature: 'Price MA5 / MA20',      value: 0.138 },
-  { feature: 'Volume Change %',       value: 0.106 },
-  { feature: 'Daily Return',          value: 0.085 },
+  { feature: 'RSI (14-day)',          value: 0.284 },
+  { feature: 'MA5 / MA20 Ratio',      value: 0.235 },
+  { feature: 'News Sentiment Score',  value: 0.182 },
+  { feature: 'Price Momentum (10d)',  value: 0.145 },
+  { feature: 'Volume Acceleration',   value: 0.098 },
+  { feature: 'Realized Volatility',   value: 0.056 },
 ]
 
-// Viridis-inspired color palette from highest to lowest importance
+// Harmonious blue palette from highest to lowest importance
 const VIRIDIS_COLORS = [
-  '#1a73e8', // Primary Blue
+  '#1a73e8',
   '#2a85ea',
   '#429bf0',
   '#6baef4',
@@ -33,13 +33,22 @@ function formatFeatureName(rawName = '') {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+function parseNumericVal(val) {
+  if (typeof val === 'number') return Math.abs(val)
+  if (!val) return 0.0
+  const clean = String(val).replace(/[^0-9.-]/g, '')
+  const num = parseFloat(clean)
+  return isNaN(num) ? 0.0 : Math.abs(num)
+}
+
 export function FeatureImportance({ features = {} }) {
   // Convert features dict to sorted array if present, otherwise use default
   let data = Object.keys(features).length > 0
     ? Object.entries(features)
         .map(([k, v]) => ({
           feature: formatFeatureName(k),
-          value:   Math.abs(Number(v) || 0),
+          value:   parseNumericVal(v),
+          rawDisplay: v,
         }))
         .sort((a, b) => b.value - a.value)
         .slice(0, 6)
@@ -50,7 +59,7 @@ export function FeatureImportance({ features = {} }) {
   const chartData = data.map(d => ({
     feature:    d.feature,
     importance: Number((d.value / (maxVal || 1)).toFixed(3)),
-    rawVal:     d.value,
+    rawVal:     d.rawDisplay || d.value,
   }))
 
   return (
@@ -68,11 +77,11 @@ export function FeatureImportance({ features = {} }) {
             tick={{ fontSize: 11, fill: '#202124', fontWeight: 500 }}
             axisLine={false}
             tickLine={false}
-            width={130}
+            width={140}
           />
           <Tooltip
-            formatter={(val) => [`${(Number(val) * 100).toFixed(1)}%`, 'Relative Weight']}
-            contentStyle={{ borderRadius: '8px', border: '1px solid #e8eaed', fontSize: '11px' }}
+            formatter={(val, name, item) => [`Value: ${item.payload.rawVal} (${(Number(val) * 100).toFixed(1)}% weight)`, 'Factor Influence']}
+            contentStyle={{ borderRadius: '10px', border: '1px solid #dadce0', fontSize: '11px', boxShadow: '0 2px 8px rgba(32,33,36,0.1)' }}
           />
           <Bar dataKey="importance" radius={[0, 4, 4, 0]} barSize={16}>
             {chartData.map((_, index) => (
