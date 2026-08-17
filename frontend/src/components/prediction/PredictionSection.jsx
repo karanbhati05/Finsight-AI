@@ -5,6 +5,7 @@ import { ProbabilityGauge } from './ProbabilityGauge'
 import { ProbabilityChart } from './ProbabilityChart'
 import { FeatureImportance } from './FeatureImportance'
 import { SharpeComparison } from './SharpeComparison'
+import { TickerQuickSwitch } from '../common/TickerQuickSwitch'
 import { usePrediction } from '../../hooks/usePrediction'
 import useMarketStore from '../../store/marketStore'
 
@@ -74,86 +75,82 @@ export function PredictionSection() {
           >
             <RotateCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button className="p-1 text-subtext rounded">
-            {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
+          <div className="p-1 text-subtext">
+            {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </div>
         </div>
       </div>
 
-      {/* ── Expanded Content Area ─────────────────────────── */}
+      {/* ── Quick Ticker Switcher Bar ──────────────────────── */}
+      <div className="px-4 py-2.5 bg-[#f8f9fa] border-b border-border flex items-center justify-between flex-wrap gap-2">
+        <span className="text-2xs font-bold uppercase tracking-wider text-[#5f6368]">
+          Predict Target:
+        </span>
+        <TickerQuickSwitch currentTicker={activeTicker} />
+      </div>
+
+      {/* ── Collapsible Body ───────────────────────────────── */}
       {isOpen && (
-        <div className="p-5 space-y-6 animate-fade-in">
-          {error ? (
-            <div className="p-6 text-center bg-surface rounded-xl border border-border flex flex-col items-center gap-2">
-              <AlertCircle size={22} className="text-loss" />
-              <p className="text-sm font-semibold text-text">Prediction Model Unavailable for {activeTicker}</p>
-              <p className="text-xs text-subtext">{error}</p>
-              <button
-                onClick={refetch}
-                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-md text-xs font-medium text-text hover:bg-surface shadow-xs transition-base"
-              >
-                <RotateCw size={12} />
-                Retry Inference
-              </button>
+        <div className="p-4 space-y-6 animate-fade-in">
+          {error && (
+            <div className="p-3 bg-loss/10 border border-loss/20 rounded-lg flex items-center gap-2 text-xs text-loss">
+              <AlertCircle size={14} className="flex-shrink-0" />
+              <span>{error}</span>
             </div>
-          ) : (
-            <>
-              {/* Top Row: Hero Prediction Card + Probability Gauge */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <PredictionCard
-                    ticker={activeTicker}
-                    prediction={prediction}
-                    label={label}
-                    probability={probability}
-                    confidence={confidence}
-                    date={date}
-                    features={features}
-                    loading={loading}
-                  />
-                </div>
-
-                <div className="border border-border rounded-xl p-4 bg-white flex flex-col items-center justify-center">
-                  <p className="text-xs font-bold text-subtext uppercase tracking-wider mb-2">
-                    Confidence Gauge
-                  </p>
-                  <ProbabilityGauge probability={probability} />
-                </div>
-              </div>
-
-              {/* Middle Row: Probability History Chart + Feature Importance */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-                {/* 60-Day Probability Trend */}
-                <div className="border border-border rounded-xl p-4 bg-white">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-text uppercase tracking-wider">
-                      Probability History (Buy/Sell Zones)
-                    </p>
-                    <span className="text-[10px] text-muted font-medium">Last 30-60 Bars</span>
-                  </div>
-                  <ProbabilityChart data={probabilityHistory} />
-                </div>
-
-                {/* XGBoost Feature Weights */}
-                <div className="border border-border rounded-xl p-4 bg-white">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-text uppercase tracking-wider">
-                      Feature Contribution (SHAP / XGBoost)
-                    </p>
-                    <span className="text-[10px] text-muted font-medium">Model Weights</span>
-                  </div>
-                  <FeatureImportance features={features} />
-                </div>
-              </div>
-
-              {/* Bottom Row: Risk-Adjusted Sharpe Ratio Benchmark */}
-              <SharpeComparison
-                strategySharpe={1.84}
-                buyHoldSharpe={1.12}
-                winRate={modelMetrics?.cv_f1 ? Math.round(modelMetrics.cv_f1 * 100) : 63.5}
-              />
-            </>
           )}
+
+          {/* Primary Top Grid: Probability Gauge & Key Verdict */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-1">
+              <ProbabilityGauge
+                probability={probability}
+                confidence={confidence}
+                label={label}
+                loading={loading}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <PredictionCard
+                ticker={activeTicker}
+                prediction={prediction}
+                label={label}
+                probability={probability}
+                confidence={confidence}
+                date={date}
+                features={features}
+                loading={loading}
+              />
+            </div>
+          </div>
+
+          {/* Sharpe Comparison Benchmark */}
+          <SharpeComparison
+            strategySharpe={modelMetrics?.sharpe_strategy || 1.84}
+            buyHoldSharpe={modelMetrics?.sharpe_buy_hold || 1.12}
+            winRate={modelMetrics?.win_rate || 64.2}
+          />
+
+          {/* 30-Day Probability Trend Chart */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-subtext mb-2">
+              30-Day Bullish Probability History
+            </h4>
+            <ProbabilityChart
+              data={probabilityHistory}
+              loading={loading}
+            />
+          </div>
+
+          {/* XGBoost Feature Importance Breakdown */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-subtext mb-2">
+              Model Factor Importance
+            </h4>
+            <FeatureImportance
+              importances={features}
+              loading={loading}
+            />
+          </div>
         </div>
       )}
     </div>

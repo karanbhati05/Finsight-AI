@@ -3,6 +3,7 @@ import { ChevronUp, ChevronDown, RotateCw, AlertCircle, Sparkles } from 'lucide-
 import { NewsCard } from './NewsCard'
 import { NewsCardSkeleton } from '../common/Skeleton'
 import { SentimentBadge } from './SentimentBadge'
+import { TickerQuickSwitch } from '../common/TickerQuickSwitch'
 import { useNews } from '../../hooks/useNews'
 import useMarketStore from '../../store/marketStore'
 
@@ -12,10 +13,18 @@ export function NewsFeed() {
   const [summaryExpanded, setSummaryExpanded] = useState(true)
 
   return (
-    <div className="mt-8">
+    <div className="mt-8 space-y-4">
+      {/* ── Quick Ticker Selection Bar ─────────────────────── */}
+      <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-[#f1f3f4]">
+        <h2 className="text-base font-bold text-[#202124]">
+          Live Market News & Sentiment
+        </h2>
+        <TickerQuickSwitch currentTicker={activeTicker} />
+      </div>
+
       {/* ── Market Summary Card (Google Finance Style) ──────── */}
       {marketSummary && (
-        <div className="mb-6 p-4 rounded-xl bg-surface border border-border transition-base">
+        <div className="p-4 rounded-xl bg-surface border border-border transition-base">
           <div
             onClick={() => setSummaryExpanded(!summaryExpanded)}
             className="flex items-center justify-between cursor-pointer select-none"
@@ -54,10 +63,10 @@ export function NewsFeed() {
       )}
 
       {/* ── Section Title ──────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-bold text-text">
-          Top stories for {activeTicker}
-        </h2>
+      <div className="flex items-center justify-between pt-2">
+        <span className="text-xs font-semibold text-[#5f6368]">
+          Top verified stories for <strong className="text-[#202124]">{activeTicker}</strong>
+        </span>
         <button
           onClick={refetch}
           className="p-1.5 rounded-full hover:bg-surface text-subtext hover:text-text transition-base"

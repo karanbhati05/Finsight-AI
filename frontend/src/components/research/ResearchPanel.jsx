@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Edit3, List, Maximize2, Minimize2 } from 'lucide-react'
+import { Edit3, List, Maximize2, Minimize2, Sparkles } from 'lucide-react'
 import { ResearchChat } from './ResearchChat'
 import { ChatInput } from './ChatInput'
 import { ThreadsAndTasks } from './ThreadsAndTasks'
+import { TickerQuickSwitch } from '../common/TickerQuickSwitch'
 import useResearchStore from '../../store/researchStore'
 import useMarketStore from '../../store/marketStore'
 import { sendMessage, clearSession } from '../../api/chat'
@@ -79,36 +80,46 @@ export function ResearchPanel({ isExpanded, onToggleExpand }) {
 
   return (
     <div className="flex flex-col h-full bg-white select-text">
-      {/* ── Research Header (Screenshot 1: Research ✏️ ≡ ⛶) ───── */}
-      <div className="h-14 flex items-center justify-between px-5 border-b border-[#e8eaed] flex-shrink-0 bg-white select-none">
-        <h2 className="text-[17px] font-medium text-[#202124] tracking-tight">
-          Research
-        </h2>
+      {/* ── Research Header with Active Asset Switcher ──────── */}
+      <div className="px-4 py-2.5 border-b border-[#e8eaed] flex-shrink-0 bg-white select-none space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Sparkles size={16} className="text-[#1a73e8]" />
+            <h2 className="text-[16px] font-bold text-[#202124] tracking-tight">
+              AI Research
+            </h2>
+          </div>
 
-        <div className="flex items-center gap-1 text-[#5f6368]">
-          <button
-            onClick={handleNewThread}
-            className="p-1.5 rounded-full hover:bg-[#f1f3f4] hover:text-[#202124] transition-base cursor-pointer"
-            title="Start New Thread"
-          >
-            <Edit3 size={18} />
-          </button>
-          <button
-            onClick={() => setView('threads')}
-            className="p-1.5 rounded-full hover:bg-[#f1f3f4] hover:text-[#202124] transition-base cursor-pointer"
-            title="Threads and Tasks View"
-          >
-            <List size={18} />
-          </button>
-          {onToggleExpand && (
+          <div className="flex items-center gap-1 text-[#5f6368]">
             <button
-              onClick={onToggleExpand}
+              onClick={handleNewThread}
               className="p-1.5 rounded-full hover:bg-[#f1f3f4] hover:text-[#202124] transition-base cursor-pointer"
-              title={isExpanded ? 'Collapse to standard width' : 'Expand to widescreen'}
+              title="Start New Thread"
             >
-              {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              <Edit3 size={16} />
             </button>
-          )}
+            <button
+              onClick={() => setView('threads')}
+              className="p-1.5 rounded-full hover:bg-[#f1f3f4] hover:text-[#202124] transition-base cursor-pointer"
+              title="Threads and Tasks View"
+            >
+              <List size={16} />
+            </button>
+            {onToggleExpand && (
+              <button
+                onClick={onToggleExpand}
+                className="p-1.5 rounded-full hover:bg-[#f1f3f4] hover:text-[#202124] transition-base cursor-pointer"
+                title={isExpanded ? 'Collapse to standard width' : 'Expand to widescreen'}
+              >
+                {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Ticker Quick Switch inside Research Panel */}
+        <div className="pt-0.5 border-t border-[#f1f3f4]">
+          <TickerQuickSwitch currentTicker={activeTicker} />
         </div>
       </div>
 
@@ -124,7 +135,7 @@ export function ResearchPanel({ isExpanded, onToggleExpand }) {
       <ChatInput
         onSendMessage={handleSendMessage}
         disabled={loading}
-        placeholder="Ask anything"
+        placeholder={`Ask anything about ${activeTicker}...`}
       />
     </div>
   )

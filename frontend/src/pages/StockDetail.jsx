@@ -29,6 +29,7 @@ import { TopBar } from '../components/layout/TopBar'
 import { ResearchPanel } from '../components/research/ResearchPanel'
 import { Sidebar } from '../components/layout/Sidebar'
 import { ResearchMemoModal } from '../components/analyst/ResearchMemoModal'
+import { TickerQuickSwitch } from '../components/common/TickerQuickSwitch'
 import useMarketStore from '../store/marketStore'
 import useWatchlistStore from '../store/watchlistStore'
 import { getNews } from '../api/news'
@@ -305,17 +306,25 @@ export function StockDetail() {
 
         {/* ── Main Content Area ──────────────────────────────── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-5 max-w-5xl space-y-6">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-[#5f6368]">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-1 hover:text-[#202124] transition-base font-medium cursor-pointer"
-            >
-              <ArrowLeft size={14} />
-              <span>Home</span>
-            </button>
-            <span>|</span>
-            <span className="font-semibold text-[#5f6368]">{cleanSymbol}:MARKET</span>
+          {/* Breadcrumb & Switcher */}
+          <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-[#5f6368]">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-1 hover:text-[#202124] transition-base font-medium cursor-pointer"
+              >
+                <ArrowLeft size={14} />
+                <span>Home</span>
+              </button>
+              <span>|</span>
+              <span className="font-semibold text-[#5f6368]">{cleanSymbol}:MARKET</span>
+            </div>
+
+            {/* Quick Ticker Switcher */}
+            <TickerQuickSwitch
+              currentTicker={cleanSymbol}
+              onSelect={(sym) => navigate(`/stock/${encodeURIComponent(sym)}`)}
+            />
           </div>
 
           {/* ── Company Title & Real Live Price Row ─────────────── */}
