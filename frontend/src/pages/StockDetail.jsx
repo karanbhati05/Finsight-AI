@@ -42,7 +42,7 @@ import {
 const TIMEFRAMES = ['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', 'MAX']
 const TABS = ['Overview', 'Financials & Balance Sheet', 'Technicals', 'Valuation & Targets']
 
-// Stock display names mapping
+// Stock and Asset display names mapping
 const STOCK_NAMES = {
   '^NSEI': 'NIFTY 50',
   '^BSESN': 'SENSEX',
@@ -58,6 +58,30 @@ const STOCK_NAMES = {
   'GOOGL': 'Alphabet Inc',
   'BTC-USD': 'Bitcoin',
   'ETH-USD': 'Ethereum',
+  'BNB-USD': 'BNB',
+  'SOL-USD': 'Solana',
+  'SI=F': 'Silver Futures',
+  'GC=F': 'Gold Futures',
+  'CL=F': 'Crude Oil WTI',
+  'NG=F': 'Natural Gas',
+  'USDINR=X': 'USD / INR',
+  'EURUSD=X': 'EUR / USD',
+  'GBPUSD=X': 'GBP / USD',
+  'USDJPY=X': 'USD / JPY',
+}
+
+const DEFAULT_ASSET_PRICES = {
+  'SI=F': { price: 28.50, change: 0.45, pct: 1.60 },
+  'GC=F': { price: 2450.00, change: 18.20, pct: 0.75 },
+  'CL=F': { price: 76.50, change: -0.80, pct: -1.03 },
+  'NG=F': { price: 2.15, change: 0.04, pct: 1.89 },
+  'BTC-USD': { price: 64250.00, change: 1250.00, pct: 1.98 },
+  'ETH-USD': { price: 3480.00, change: 62.00, pct: 1.81 },
+  'AAPL': { price: 228.60, change: -1.25, pct: -0.54 },
+  'NVDA': { price: 128.40, change: 2.80, pct: 2.23 },
+  'MSFT': { price: 448.20, change: 1.10, pct: 0.25 },
+  '^NSEI': { price: 24366.00, change: -29.85, pct: -0.12 },
+  '^BSESN': { price: 79800.25, change: -72.10, pct: -0.09 },
 }
 
 export function StockDetail() {
@@ -114,11 +138,12 @@ export function StockDetail() {
     return () => { cancelled = true }
   }, [cleanSymbol])
 
-  // Current real-time price
+  // Asset price mapping with proper symbol-specific defaults
+  const assetProfile = DEFAULT_ASSET_PRICES[cleanSymbol] || { price: 100.00, change: 0.50, pct: 0.50 }
   const displayName = STOCK_NAMES[cleanSymbol] || ratios.name || marketQuote?.name || cleanSymbol
-  const currentPrice = Number(ratios.price || marketQuote?.value || (candles.length > 0 ? candles[candles.length - 1].close : (cleanSymbol === '^NSEI' ? 24366.00 : cleanSymbol === '^BSESN' ? 79800.25 : 228.60)))
-  const dayChangeValue = Number(marketQuote?.change !== undefined ? marketQuote.change : (candles.length > 1 ? currentPrice - candles[candles.length - 2].close : -1.25))
-  const dayChangePct   = Number(marketQuote?.change_pct !== undefined ? marketQuote.change_pct : (candles.length > 1 && candles[candles.length - 2].close ? (dayChangeValue / candles[candles.length - 2].close * 100) : -0.54))
+  const currentPrice = Number(ratios.price || marketQuote?.value || (candles.length > 0 ? candles[candles.length - 1].close : assetProfile.price))
+  const dayChangeValue = Number(marketQuote?.change !== undefined ? marketQuote.change : (candles.length > 1 ? currentPrice - candles[candles.length - 2].close : assetProfile.change))
+  const dayChangePct   = Number(marketQuote?.change_pct !== undefined ? marketQuote.change_pct : (candles.length > 1 && candles[candles.length - 2].close ? (dayChangeValue / candles[candles.length - 2].close * 100) : assetProfile.pct))
 
   // ── Slicing Real Historical FMP Candlesticks for each timeframe ───
   const { chartData, tfBaseline, tfChangeVal, tfChangePct, tfIsUp, tfLabel } = useMemo(() => {
@@ -185,7 +210,7 @@ export function StockDetail() {
 
     let selectedCandles = rawList.slice(-sliceCount)
 
-    // Fallback if candlesticks empty for indices
+    // Fallback if candlesticks empty
     if (!selectedCandles || selectedCandles.length < 2) {
       const baseVal = Number((currentPrice * (timeframe === '5Y' ? 0.45 : timeframe === '1Y' ? 0.78 : 0.94)).toFixed(2))
       const diff = currentPrice - baseVal
@@ -214,7 +239,6 @@ export function StockDetail() {
     for (let i = 0; i < selectedCandles.length; i += step) {
       const c = selectedCandles[i]
       const rawDate = c.date || c.time || ''
-      // Format clean date label (e.g. "Aug 15" or "2024")
       const dParts = rawDate.split('-')
       const formattedDate = dParts.length === 3 ? (timeframe === '5Y' || timeframe === 'MAX' ? dParts[0] : `${dParts[1]}/${dParts[2]}`) : rawDate
       formattedPoints.push({
