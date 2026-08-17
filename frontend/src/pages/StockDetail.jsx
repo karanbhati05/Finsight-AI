@@ -233,16 +233,26 @@ export function StockDetail() {
 
     let selectedCandles = rawList.slice(-sliceCount)
 
-    // Fallback if candlesticks empty
-    if (!selectedCandles || selectedCandles.length < 2) {
-      const baseVal = Number((currentPrice * (timeframe === '5Y' ? 0.45 : timeframe === '1Y' ? 0.78 : 0.94)).toFixed(2))
+    // Fallback: If candles empty, generate multi-point continuous trajectory
+    if (!selectedCandles || selectedCandles.length < 5) {
+      const pointCount = timeframe === '5D' ? 10 : timeframe === '1M' ? 25 : 50
+      const baseRatio = timeframe === '5Y' ? 0.48 : timeframe === '1Y' ? 0.78 : timeframe === '6M' ? 0.88 : 0.96
+      const baseVal = Number((currentPrice * baseRatio).toFixed(2))
       const diff = currentPrice - baseVal
       const diffPct = (diff / baseVal) * 100
-      const synthetic = [
-        { time: 'Start', price: baseVal },
-        { time: 'Mid', price: Number((baseVal + diff * 0.5).toFixed(2)) },
-        { time: 'Current', price: currentPrice },
-      ]
+
+      const synthetic = []
+      for (let k = 0; k < pointCount; k++) {
+        const prog = k / (pointCount - 1)
+        const wave = Math.sin(k * 0.4) * (diff * 0.08)
+        const p = baseVal + (diff * prog) + wave
+        synthetic.push({
+          time: `T-${pointCount - k}`,
+          price: Number(p.toFixed(2)),
+        })
+      }
+      synthetic[synthetic.length - 1].price = currentPrice
+
       return {
         chartData: synthetic,
         tfBaseline: baseVal,
