@@ -10,6 +10,7 @@ import json
 import httpx
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -37,7 +38,8 @@ class ConnectionManager:
 
     async def send(self, ws: WebSocket, data: dict):
         try:
-            await ws.send_text(json.dumps(data))
+            if ws.client_state == WebSocketState.CONNECTED:
+                await ws.send_text(json.dumps(data))
         except Exception:
             pass
 
@@ -115,7 +117,7 @@ async def websocket_prices(websocket: WebSocket):
             except asyncio.TimeoutError:
                 pass
 
-            if subscribed_tickers:
+            if subscribed_tickers and websocket.client_state == WebSocketState.CONNECTED:
                 prices = await _fetch_prices_batch(subscribed_tickers)
                 await manager.send(websocket, {
                     "type": "price_update",
@@ -128,5 +130,4 @@ async def websocket_prices(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket)
