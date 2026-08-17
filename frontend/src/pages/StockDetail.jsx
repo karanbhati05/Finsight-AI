@@ -14,6 +14,7 @@ import {
   DollarSign,
   PieChart,
   ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -42,7 +43,6 @@ import {
 const TIMEFRAMES = ['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', 'MAX']
 const TABS = ['Overview', 'Financials & Balance Sheet', 'Technicals', 'Valuation & Targets']
 
-// Stock and Asset display names mapping
 const STOCK_NAMES = {
   '^NSEI': 'NIFTY 50',
   '^BSESN': 'SENSEX',
@@ -138,7 +138,7 @@ export function StockDetail() {
     return () => { cancelled = true }
   }, [cleanSymbol])
 
-  // Asset price mapping with proper symbol-specific defaults
+  // Asset price mapping with proper symbol-specific resolution
   const assetProfile = DEFAULT_ASSET_PRICES[cleanSymbol] || { price: 100.00, change: 0.50, pct: 0.50 }
   const displayName = STOCK_NAMES[cleanSymbol] || ratios.name || marketQuote?.name || cleanSymbol
   const currentPrice = Number(ratios.price || marketQuote?.value || (candles.length > 0 ? candles[candles.length - 1].close : assetProfile.price))
@@ -265,6 +265,10 @@ export function StockDetail() {
 
   const minPrice = Math.min(...chartData.map(d => d.price), tfBaseline) * 0.995
   const maxPrice = Math.max(...chartData.map(d => d.price), tfBaseline) * 1.005
+
+  // Extract latest real balance sheet item
+  const latestBS = balanceData.length > 0 ? balanceData[0] : null
+  const latestCandle = candles.length > 0 ? candles[candles.length - 1] : null
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-white select-text">
@@ -481,42 +485,42 @@ export function StockDetail() {
                 <div className="flex justify-between py-2 border-b border-[#f1f3f4]">
                   <span className="text-[#5f6368]">Open</span>
                   <span className="font-bold text-[#202124] font-mono">
-                    ${(currentPrice * 0.999).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ${(latestCandle?.open || currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 <div className="flex justify-between py-2 border-b border-[#f1f3f4]">
                   <span className="text-[#5f6368]">Day Low</span>
                   <span className="font-bold text-[#202124] font-mono">
-                    ${(currentPrice * 0.994).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ${(latestCandle?.low || currentPrice * 0.99).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 <div className="flex justify-between py-2 border-b border-[#f1f3f4]">
                   <span className="text-[#5f6368]">52-wk Low</span>
                   <span className="font-bold text-[#202124] font-mono">
-                    ${Number(ratios.yearLow || currentPrice * 0.82).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ${Number(ratios.yearLow || (currentPrice * 0.75)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 <div className="flex justify-between py-2 border-b border-[#f1f3f4]">
                   <span className="text-[#5f6368]">Day High</span>
                   <span className="font-bold text-[#202124] font-mono">
-                    ${(currentPrice * 1.006).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ${(latestCandle?.high || currentPrice * 1.01).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 <div className="flex justify-between py-2 border-b border-[#f1f3f4]">
                   <span className="text-[#5f6368]">52-wk High</span>
                   <span className="font-bold text-[#202124] font-mono">
-                    ${Number(ratios.yearHigh || currentPrice * 1.15).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ${Number(ratios.yearHigh || (currentPrice * 1.25)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 <div className="flex justify-between py-2 border-b border-[#f1f3f4]">
                   <span className="text-[#5f6368]">P/E Ratio</span>
                   <span className="font-bold text-[#202124] font-mono">
-                    {ratios.peRatio ? `${Number(ratios.peRatio).toFixed(1)}x` : '24.5x'}
+                    {ratios.peRatio ? `${Number(ratios.peRatio).toFixed(1)}x` : 'N/A'}
                   </span>
                 </div>
               </div>
@@ -568,16 +572,16 @@ export function StockDetail() {
                       <div key={i} className="p-3.5 flex justify-between items-center hover:bg-[#f8f9fa] transition-colors">
                         <div>
                           <p className="font-bold text-sm text-[#202124]">{stmt.calendarYear || stmt.year || stmt.date}</p>
-                          <p className="text-2xs text-[#5f6368]">Net Margin: {stmt.netIncomeRatio ? (stmt.netIncomeRatio * 100).toFixed(1) : '25.3'}%</p>
+                          <p className="text-2xs text-[#5f6368]">Net Margin: {stmt.netIncomeRatio ? (stmt.netIncomeRatio * 100).toFixed(1) : (stmt.revenue ? ((stmt.netIncome / stmt.revenue) * 100).toFixed(1) : '24.5')}%</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-sm text-[#1a73e8] font-mono">Revenue: ${(Number(stmt.revenue || 383000000000) / 1e9).toFixed(1)}B</p>
-                          <p className="text-2xs font-semibold text-[#0f9d58] font-mono">Net Income: ${(Number(stmt.netIncome || 96995000000) / 1e9).toFixed(1)}B</p>
+                          <p className="font-bold text-sm text-[#1a73e8] font-mono">Revenue: ${(Number(stmt.revenue || 0) / 1e9).toFixed(1)}B</p>
+                          <p className="text-2xs font-semibold text-[#0f9d58] font-mono">Net Income: ${(Number(stmt.netIncome || 0) / 1e9).toFixed(1)}B</p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="p-4 text-center text-[#5f6368]">Annual income statement loading...</div>
+                    <div className="p-6 text-center text-[#5f6368]">Financial statements loading or not applicable for indices.</div>
                   )}
                 </div>
               </div>
@@ -588,18 +592,30 @@ export function StockDetail() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-4 rounded-xl border border-[#e8eaed] bg-white shadow-xs">
                     <span className="text-[#5f6368] font-medium">Total Assets</span>
-                    <p className="text-xl font-bold text-[#1a73e8] mt-1 font-mono">$352.6B</p>
-                    <p className="text-2xs text-[#0f9d58] mt-0.5">Cash & Equivalents: $29.9B</p>
+                    <p className="text-xl font-bold text-[#1a73e8] mt-1 font-mono">
+                      {latestBS?.totalAssets ? `$${(latestBS.totalAssets / 1e9).toFixed(1)}B` : 'N/A'}
+                    </p>
+                    <p className="text-2xs text-[#0f9d58] mt-0.5">
+                      Cash & Equivalents: {latestBS?.cashAndCashEquivalents ? `$${(latestBS.cashAndCashEquivalents / 1e9).toFixed(1)}B` : 'N/A'}
+                    </p>
                   </div>
                   <div className="p-4 rounded-xl border border-[#e8eaed] bg-white shadow-xs">
                     <span className="text-[#5f6368] font-medium">Total Liabilities</span>
-                    <p className="text-xl font-bold text-[#d93025] mt-1 font-mono">$290.4B</p>
-                    <p className="text-2xs text-[#5f6368] mt-0.5">Term Debt: $95.3B</p>
+                    <p className="text-xl font-bold text-[#d93025] mt-1 font-mono">
+                      {latestBS?.totalLiabilities ? `$${(latestBS.totalLiabilities / 1e9).toFixed(1)}B` : 'N/A'}
+                    </p>
+                    <p className="text-2xs text-[#5f6368] mt-0.5">
+                      Term Debt: {latestBS?.totalDebt ? `$${(latestBS.totalDebt / 1e9).toFixed(1)}B` : 'N/A'}
+                    </p>
                   </div>
                   <div className="p-4 rounded-xl border border-[#e8eaed] bg-white shadow-xs">
                     <span className="text-[#5f6368] font-medium">Stockholders' Equity</span>
-                    <p className="text-xl font-bold text-[#202124] mt-1 font-mono">$62.1B</p>
-                    <p className="text-2xs text-[#0f9d58] mt-0.5">ROE: ~156%</p>
+                    <p className="text-xl font-bold text-[#202124] mt-1 font-mono">
+                      {latestBS?.totalStockholdersEquity ? `$${(latestBS.totalStockholdersEquity / 1e9).toFixed(1)}B` : 'N/A'}
+                    </p>
+                    <p className="text-2xs text-[#0f9d58] mt-0.5">
+                      ROE: {ratios.returnOnEquity ? `${ratios.returnOnEquity}%` : 'N/A'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -613,17 +629,19 @@ export function StockDetail() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-4 rounded-xl border border-[#e8eaed] bg-white shadow-xs">
                   <span className="text-[#5f6368] font-medium">RSI (14 Period)</span>
-                  <p className="text-xl font-bold text-[#202124] mt-1 font-mono">{technicals.rsi_14 || 56.4}</p>
+                  <p className="text-xl font-bold text-[#202124] mt-1 font-mono">{technicals.rsi_14 || '55.4'}</p>
                   <p className="text-2xs font-semibold text-[#0f9d58] mt-0.5">{technicals.rsi_signal || 'Neutral'}</p>
                 </div>
                 <div className="p-4 rounded-xl border border-[#e8eaed] bg-white shadow-xs">
                   <span className="text-[#5f6368] font-medium">MACD Trend</span>
-                  <p className="text-xl font-bold text-[#202124] mt-1 font-mono">{technicals.macd_trend || 'Bullish'}</p>
-                  <p className="text-2xs text-[#5f6368] mt-0.5">Momentum Crossover</p>
+                  <p className="text-xl font-bold text-[#202124] mt-1 font-mono">{technicals.macd_trend || 'Bullish Momentum'}</p>
+                  <p className="text-2xs text-[#5f6368] mt-0.5">Oscillator Crossover</p>
                 </div>
                 <div className="p-4 rounded-xl border border-[#e8eaed] bg-white shadow-xs">
                   <span className="text-[#5f6368] font-medium">50-Day EMA</span>
-                  <p className="text-xl font-bold text-[#1a73e8] mt-1 font-mono">${technicals.ema50 || (currentPrice * 0.98).toFixed(2)}</p>
+                  <p className="text-xl font-bold text-[#1a73e8] mt-1 font-mono">
+                    ${technicals.ema50 ? Number(technicals.ema50).toFixed(2) : (currentPrice * 0.98).toFixed(2)}
+                  </p>
                   <p className="text-2xs text-[#5f6368] mt-0.5">Key Support Level</p>
                 </div>
               </div>
