@@ -1,7 +1,6 @@
-import { AreaChart, Area, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts'
 
-export function SparklineChart({ data = [], width = '100%', height = 45, isUp = true }) {
-  // If data is empty or short, generate realistic 8-point mini sparkline trend
+export function SparklineChart({ data = [], width = '100%', height = 36, isUp = true }) {
   let points = data && data.length >= 2 ? data : null
 
   if (!points) {
@@ -9,13 +8,13 @@ export function SparklineChart({ data = [], width = '100%', height = 45, isUp = 
     const factor = isUp ? 1 : -1
     points = [
       base,
-      base + factor * 0.4,
-      base - factor * 0.2,
       base + factor * 0.8,
-      base + factor * 0.5,
-      base + factor * 1.2,
-      base + factor * 0.9,
-      base + factor * 1.5,
+      base - factor * 0.4,
+      base + factor * 1.6,
+      base + factor * 1.1,
+      base + factor * 2.5,
+      base + factor * 1.9,
+      base + factor * 3.2,
     ]
   }
 
@@ -29,24 +28,24 @@ export function SparklineChart({ data = [], width = '100%', height = 45, isUp = 
   const chartData = points.map((val, i) => ({ value: Number(val), i }))
 
   return (
-    <div style={{ width: typeof width === 'number' ? `${width}px` : width, height: `${height}px` }} className="overflow-hidden flex items-center">
+    <div style={{ width: typeof width === 'number' ? `${width}px` : width, height: `${height}px` }} className="overflow-hidden">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={chartData} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={strokeColor} stopOpacity={0.25} />
+              <stop offset="0%" stopColor={strokeColor} stopOpacity={0.35} />
               <stop offset="100%" stopColor={strokeColor} stopOpacity={0.0} />
             </linearGradient>
           </defs>
 
-          {/* Dotted horizontal baseline */}
-          <ReferenceLine y={firstValue} stroke="#dadce0" strokeDasharray="2 2" strokeWidth={1} />
+          {/* Auto-scale Y-axis to dataMin / dataMax for crisp waves */}
+          <YAxis hide domain={['dataMin', 'dataMax']} />
 
           <Area
             type="monotone"
             dataKey="value"
             stroke={strokeColor}
-            strokeWidth={1.5}
+            strokeWidth={1.8}
             fill={`url(#${gradId})`}
             dot={false}
             isAnimationActive={false}
