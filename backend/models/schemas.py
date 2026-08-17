@@ -128,9 +128,19 @@ class WatchlistStockData(BaseModel):
 # ── Portfolio ────────────────────────────────────────────────────────────────
 
 class PortfolioItem(BaseModel):
-    ticker:    str
-    shares:    float
-    buy_price: float
+    ticker:        str
+    shares:        float
+    buy_price:     Optional[float] = 0.0
+    avg_buy_price: Optional[float] = 0.0
+    buy_date:      Optional[str] = "2024-01-01"
+
+
+class PortfolioHoldingCreate(BaseModel):
+    ticker:        str
+    shares:        float
+    buy_price:     Optional[float] = 0.0
+    avg_buy_price: Optional[float] = 0.0
+    buy_date:      Optional[str] = "2024-01-01"
 
 
 class PortfolioHolding(BaseModel):

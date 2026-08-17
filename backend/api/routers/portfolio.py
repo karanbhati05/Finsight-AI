@@ -78,7 +78,7 @@ async def _enrich_holdings(holdings: list[dict]) -> tuple[list[dict], dict]:
     for h in holdings:
         ticker = h["ticker"].upper()
         shares = float(h.get("shares", 0))
-        avg_price = float(h.get("avg_buy_price", 0))
+        avg_price = float(h.get("avg_buy_price") or h.get("buy_price") or 0)
         cost_basis = shares * avg_price
 
         live = quotes.get(ticker, {})
@@ -136,16 +136,22 @@ async def get_portfolio():
 async def add_holding(holding: PortfolioHoldingCreate):
     """Add or update a stock position in the portfolio."""
     ticker = holding.ticker.upper().strip()
+    buy_p = float(holding.avg_buy_price or holding.buy_price or 0.0)
 
     # If position already exists, average it
     existing = next((h for h in _holdings if h["ticker"] == ticker), None)
     if existing:
         total_shares = existing["shares"] + holding.shares
-        total_cost = (existing["shares"] * existing["avg_buy_price"]) + (holding.shares * holding.avg_buy_price)
+        total_cost = (existing["shares"] * existing["avg_buy_price"]) + (holding.shares * buy_p)
         existing["shares"] = total_shares
         existing["avg_buy_price"] = round(total_cost / total_shares, 2)
     else:
-        _holdings.append(holding.dict())
+        _holdings.append({
+            "ticker": ticker,
+            "shares": holding.shares,
+            "avg_buy_price": buy_p,
+            "buy_date": holding.buy_date or "2024-01-01",
+        })
 
     _save_portfolio(_holdings)
     holdings, summary = await _enrich_holdings(_holdings)
