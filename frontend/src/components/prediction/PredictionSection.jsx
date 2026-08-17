@@ -20,6 +20,7 @@ export function PredictionSection() {
     confidence,
     date,
     features,
+    featureImportance,
     probabilityHistory,
     modelMetrics,
     loading,
@@ -59,7 +60,7 @@ export function PredictionSection() {
               )}
             </div>
             <p className="text-xs text-subtext">
-              XGBoost Directional Model with FinBERT Sentiment & Technical Indicators
+              Scikit-Learn Gradient Boosted Trees with Dynamic Technical & Sentiment Features
             </p>
           </div>
         </div>
@@ -141,13 +142,13 @@ export function PredictionSection() {
             />
           </div>
 
-          {/* XGBoost Feature Importance Breakdown */}
+          {/* Scikit-Learn Feature Importance Breakdown */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-subtext mb-2">
-              Model Factor Importance
+              Model Factor Importance (Fitted GBDT Model)
             </h4>
             <FeatureImportance
-              importances={features}
+              features={featureImportance}
               loading={loading}
             />
           </div>
