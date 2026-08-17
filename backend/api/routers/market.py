@@ -57,6 +57,7 @@ MARKET_REGIONS = {
         {"symbol": "CL=F", "name": "Crude Oil",   "base_val": 76.5},
         {"symbol": "NG=F", "name": "Natural Gas", "base_val": 2.15},
     ],
+    "macro": [],
 }
 
 
@@ -103,9 +104,12 @@ async def _fetch_coingecko_prices(ids: list[str]) -> dict:
 
 
 @router.get("/indices")
-async def get_indices(region: str = Query("india", regex="^(india|us|europe|crypto|currencies|futures)$")):
+async def get_indices(region: str = Query("india", regex="^(india|us|europe|crypto|currencies|futures|macro)$")):
     """Get live market indices for a region with dynamic values and sparklines."""
-    cache_key = f"market:indices:v4:{region}"
+    if region == "macro":
+        return {"region": "macro", "indices": []}
+
+    cache_key = f"market:indices:v5:{region}"
     cached = cache.get(cache_key)
     if cached:
         return {"region": region, "indices": cached}
@@ -125,7 +129,6 @@ async def get_indices(region: str = Query("india", regex="^(india|us|europe|cryp
             chg_pct = round(float(live.get("usd_24h_change") or 1.25), 2)
             chg_val = round(val * (chg_pct / 100.0), 2)
 
-            # Generate dynamic sparkline around live price
             spark = [
                 round(val * (1.0 - (chg_pct / 100.0) * (1.0 - (k / 7.0))), 2)
                 for k in range(8)
@@ -157,7 +160,6 @@ async def get_indices(region: str = Query("india", regex="^(india|us|europe|cryp
         chg_pct = round(float(live.get("changesPercentage") or 0.15), 2)
         chg_val = round(float(live.get("change") or (val * chg_pct / 100.0)), 2)
 
-        # Generate dynamic sparkline
         spark = [
             round(val * (1.0 - (chg_pct / 100.0) * (1.0 - (k / 7.0))), 2)
             for k in range(8)
@@ -178,7 +180,7 @@ async def get_indices(region: str = Query("india", regex="^(india|us|europe|cryp
 
 
 @router.get("/sectors")
-async def get_sectors(region: str = Query("india", regex="^(india|us|europe|crypto|currencies|futures)$")):
+async def get_sectors(region: str = Query("india", regex="^(india|us|europe|crypto|currencies|futures|macro)$")):
     """Get equity sector performance metrics."""
     if region != "india":
         return {"region": region, "sectors": []}
