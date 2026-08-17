@@ -71,17 +71,23 @@ const STOCK_NAMES = {
 }
 
 const DEFAULT_ASSET_PRICES = {
+  '^GSPC': { price: 5820.00, change: 8.73, pct: 0.15 },
+  '^DJI':  { price: 43850.00, change: -45.20, pct: -0.10 },
+  '^IXIC': { price: 18850.00, change: 52.40, pct: 0.28 },
+  '^NSEI': { price: 24366.00, change: -29.85, pct: -0.12 },
+  '^BSESN': { price: 79800.25, change: -72.10, pct: -0.09 },
+  'BTC-USD': { price: 64250.00, change: 1250.00, pct: 1.98 },
+  'ETH-USD': { price: 3480.00, change: 62.00, pct: 1.81 },
+  'BNB-USD': { price: 585.00, change: 4.20, pct: 0.72 },
+  'SOL-USD': { price: 162.00, change: 8.10, pct: 5.24 },
   'SI=F': { price: 28.50, change: 0.45, pct: 1.60 },
   'GC=F': { price: 2450.00, change: 18.20, pct: 0.75 },
   'CL=F': { price: 76.50, change: -0.80, pct: -1.03 },
   'NG=F': { price: 2.15, change: 0.04, pct: 1.89 },
-  'BTC-USD': { price: 64250.00, change: 1250.00, pct: 1.98 },
-  'ETH-USD': { price: 3480.00, change: 62.00, pct: 1.81 },
   'AAPL': { price: 228.60, change: -1.25, pct: -0.54 },
   'NVDA': { price: 128.40, change: 2.80, pct: 2.23 },
   'MSFT': { price: 448.20, change: 1.10, pct: 0.25 },
-  '^NSEI': { price: 24366.00, change: -29.85, pct: -0.12 },
-  '^BSESN': { price: 79800.25, change: -72.10, pct: -0.09 },
+  'TSLA': { price: 218.50, change: -3.20, pct: -1.44 },
 }
 
 export function StockDetail() {
@@ -141,9 +147,25 @@ export function StockDetail() {
   // Asset price mapping with proper symbol-specific resolution
   const assetProfile = DEFAULT_ASSET_PRICES[cleanSymbol] || { price: 100.00, change: 0.50, pct: 0.50 }
   const displayName = STOCK_NAMES[cleanSymbol] || ratios.name || marketQuote?.name || cleanSymbol
-  const currentPrice = Number(ratios.price || marketQuote?.value || (candles.length > 0 ? candles[candles.length - 1].close : assetProfile.price))
-  const dayChangeValue = Number(marketQuote?.change !== undefined ? marketQuote.change : (candles.length > 1 ? currentPrice - candles[candles.length - 2].close : assetProfile.change))
-  const dayChangePct   = Number(marketQuote?.change_pct !== undefined ? marketQuote.change_pct : (candles.length > 1 && candles[candles.length - 2].close ? (dayChangeValue / candles[candles.length - 2].close * 100) : assetProfile.pct))
+
+  const currentPrice = Number(
+    (marketQuote?.value && marketQuote.value > 0 ? marketQuote.value : null) ||
+    (candles.length > 0 && candles[candles.length - 1]?.close ? candles[candles.length - 1].close : null) ||
+    (ratios?.price && ratios.price > 0 ? ratios.price : null) ||
+    assetProfile.price
+  )
+
+  const dayChangeValue = Number(
+    (marketQuote?.change !== undefined && marketQuote.change !== null ? marketQuote.change : null) ||
+    (candles.length > 1 ? currentPrice - candles[candles.length - 2].close : null) ||
+    assetProfile.change
+  )
+
+  const dayChangePct = Number(
+    (marketQuote?.change_pct !== undefined && marketQuote.change_pct !== null ? marketQuote.change_pct : null) ||
+    (candles.length > 1 && candles[candles.length - 2].close ? (dayChangeValue / candles[candles.length - 2].close * 100) : null) ||
+    assetProfile.pct
+  )
 
   // ── Slicing Real Historical FMP Candlesticks for each timeframe ───
   const { chartData, tfBaseline, tfChangeVal, tfChangePct, tfIsUp, tfLabel } = useMemo(() => {

@@ -104,7 +104,8 @@ class FMPClient:
     @staticmethod
     async def get_financial_ratios(ticker: str) -> dict:
         """Fetch comprehensive valuation, profitability, and solvency ratios directly from FMP."""
-        cache_key = f"fmp:ratios:live:{ticker.upper()}"
+        clean_ticker = ticker.upper().strip()
+        cache_key = f"fmp:ratios:live:v2:{clean_ticker}"
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -112,48 +113,44 @@ class FMPClient:
         if FMP_API_KEY:
             try:
                 async with httpx.AsyncClient(timeout=8.0) as client:
-                    # Query ratios and quote
                     resp = await client.get(
-                        f"{BASE_URL}/ratios/{ticker.upper()}?limit=1&apikey={FMP_API_KEY}"
+                        f"{BASE_URL}/ratios/{clean_ticker}?limit=1&apikey={FMP_API_KEY}"
                     )
                     quote_resp = await client.get(
-                        f"{BASE_URL}/quote/{ticker.upper()}?apikey={FMP_API_KEY}"
+                        f"{BASE_URL}/quote/{clean_ticker}?apikey={FMP_API_KEY}"
                     )
 
-                    r_data = resp.json()[0] if resp.status_code == 200 and resp.json() else {}
-                    q_data = quote_resp.json()[0] if quote_resp.status_code == 200 and quote_resp.json() else {}
+                    r_data = resp.json()[0] if resp.status_code == 200 and resp.json() and isinstance(resp.json(), list) else {}
+                    q_data = quote_resp.json()[0] if quote_resp.status_code == 200 and quote_resp.json() and isinstance(quote_resp.json(), list) else {}
+
+                    live_price = float(q_data.get("price")) if q_data.get("price") is not None else None
+                    pe_val = float(q_data.get("pe") or r_data.get("priceEarningsRatio") or 0.0)
 
                     ratios = {
-                        "ticker": ticker.upper(),
-                        "peRatio": round(float(q_data.get("pe") or r_data.get("priceEarningsRatio") or 24.5), 2),
-                        "priceToSalesRatio": round(float(r_data.get("priceToSalesRatio") or 7.2), 2),
-                        "priceToBookRatio": round(float(r_data.get("priceToBookRatio") or 35.8), 2),
-                        "enterpriseValueToEBITDA": round(float(r_data.get("enterpriseValueMultiple") or 19.4), 2),
-                        "profitMargin": round(float(r_data.get("netProfitMargin") or 0.25) * 100, 2),
-                        "operatingMargin": round(float(r_data.get("operatingProfitMargin") or 0.30) * 100, 2),
-                        "returnOnEquity": round(float(r_data.get("returnOnEquity") or 1.56) * 100, 2),
-                        "returnOnAssets": round(float(r_data.get("returnOnAssets") or 0.28) * 100, 2),
-                        "debtToEquity": round(float(r_data.get("debtEquityRatio") or 1.45), 2),
-                        "currentRatio": round(float(r_data.get("currentRatio") or 1.05), 2),
-                        "quickRatio": round(float(r_data.get("quickRatio") or 0.85), 2),
-                        "marketCap": q_data.get("marketCap", 3480000000000),
-                        "price": q_data.get("price", 228.60),
-                        "yearHigh": q_data.get("yearHigh", 237.23),
-                        "yearLow": q_data.get("yearLow", 164.08),
+                        "ticker": clean_ticker,
+                        "name": q_data.get("name"),
+                        "price": live_price,
+                        "peRatio": round(pe_val, 2) if pe_val > 0 else None,
+                        "priceToSalesRatio": round(float(r_data.get("priceToSalesRatio")), 2) if r_data.get("priceToSalesRatio") else None,
+                        "priceToBookRatio": round(float(r_data.get("priceToBookRatio")), 2) if r_data.get("priceToBookRatio") else None,
+                        "enterpriseValueToEBITDA": round(float(r_data.get("enterpriseValueMultiple")), 2) if r_data.get("enterpriseValueMultiple") else None,
+                        "profitMargin": round(float(r_data.get("netProfitMargin") or 0.0) * 100, 2) if r_data.get("netProfitMargin") else None,
+                        "operatingMargin": round(float(r_data.get("operatingProfitMargin") or 0.0) * 100, 2) if r_data.get("operatingProfitMargin") else None,
+                        "returnOnEquity": round(float(r_data.get("returnOnEquity") or 0.0) * 100, 2) if r_data.get("returnOnEquity") else None,
+                        "returnOnAssets": round(float(r_data.get("returnOnAssets") or 0.0) * 100, 2) if r_data.get("returnOnAssets") else None,
+                        "debtToEquity": round(float(r_data.get("debtEquityRatio")), 2) if r_data.get("debtEquityRatio") else None,
+                        "currentRatio": round(float(r_data.get("currentRatio")), 2) if r_data.get("currentRatio") else None,
+                        "quickRatio": round(float(r_data.get("quickRatio")), 2) if r_data.get("quickRatio") else None,
+                        "marketCap": q_data.get("marketCap"),
+                        "yearHigh": q_data.get("yearHigh"),
+                        "yearLow": q_data.get("yearLow"),
                     }
                     cache.set(cache_key, ratios, ttl=3600)
                     return ratios
             except Exception as e:
-                logger.warning(f"FMP financial ratios error for {ticker}: {e}")
+                logger.warning(f"FMP financial ratios error for {clean_ticker}: {e}")
 
-        return {
-            "ticker": ticker.upper(),
-            "peRatio": 24.5,
-            "priceToSalesRatio": 7.2,
-            "priceToBookRatio": 35.8,
-            "returnOnEquity": 156.0,
-            "profitMargin": 25.3,
-        }
+        return {"ticker": clean_ticker}
 
     @staticmethod
     async def get_historical_candlesticks(ticker: str) -> list[dict]:
